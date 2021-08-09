@@ -159,11 +159,25 @@ class tgDC {
 }
 
 function tgDC($rawParam) { // DC查询入口
-    global $chatId, $userAccount;
-    if ($rawParam === '') {
-        $rawParam = $userAccount;
+    global $chatId, $userAccount, $isGroup;
+    if ($rawParam !== '') { // 请求不为空
+        sendMessage($chatId, (new tgDC)->getInfo($rawParam)); // 查询并返回数据
+        return;
     }
-    sendMessage($chatId, (new tgDC)->getInfo($rawParam));
+    if (!$isGroup) { // 群组不发送帮助信息
+        $message = json_decode(sendMessage($chatId, array( // 发送帮助信息
+            'parse_mode' => 'Markdown',
+            'text' => '*Usage:*  `/dc username`'
+        )), true);
+    }
+    sendMessage($chatId, (new tgDC)->getInfo($userAccount)); // 查询并返回数据
+    if ($isGroup) { return; }
+    sleep(20);
+    sendPayload(array( // 删除帮助信息
+        'method' => 'deleteMessage',
+        'chat_id' => $chatId,
+        'message_id' => $message['result']['message_id']
+    ));
 }
 
 ?>
