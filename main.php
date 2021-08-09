@@ -45,14 +45,6 @@ foreach ($cmds as $cmd) {
     }
 }
 
-function test($rawParam) {
-    debugDump();
-}
-
-function testCallback($rawParam) {
-    debugDump();
-}
-
 function loadEnv() { // 载入环境变量
     $file = fopen('.env', 'r');
     $data = array();
