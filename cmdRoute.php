@@ -5,13 +5,15 @@ require_once 'models/ipInfo.php';
 require_once 'models/cfopPic.php';
 require_once 'models/kmsCheck.php';
 require_once 'models/ntpCheck.php';
+require_once 'models/whoisQuery.php';
 
 $cmds = array( // 命令列表
     'ip',
     'dc',
     'kms',
     'ntp',
-    'cfop'
+    'cfop',
+    'whois'
 );
 
 function route($cmd, $rawParam) { // 命令请求路由
@@ -30,6 +32,9 @@ function route($cmd, $rawParam) { // 命令请求路由
             break;
         case 'cfop':
             cfopPic($rawParam);
+            break;
+        case 'whois':
+            whoisQuery($rawParam);
             break;
     }
 }
