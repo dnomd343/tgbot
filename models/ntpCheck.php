@@ -1,5 +1,74 @@
 <?php
 
+class ntpDB extends SQLite3 {
+    public function __construct() {
+        $this->open('./models/ntpServer.db'); // NTP服务器数据库
+    }
+}
+
+class ntpList {
+    private function getListName($list_id) { // 获取对应组的名称
+        $db = new ntpDB;
+        $res = $db->query('SELECT * FROM `ntp_list` WHERE id=' . $list_id . ';');
+        return $res->fetchArray(SQLITE3_ASSOC)['name'];
+    }
+
+    private function getNtpList() { // 获取所有NTP服务器地址
+        $db = new ntpDB;
+        $res = $db->query('SELECT * FROM `ntp_host`;');
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $index = $row['list_id'];
+            unset($row['list_id']);
+            $data[$this->getListName($index)][] = $row;
+        }
+        return $data;
+    }
+
+    private function hashGroupName($str) { // 计算组名的哈希值
+        return substr(md5($str), 0, 12);
+    }
+
+    public function showList() { // 列出所有NTP服务器组
+        $ntpList = $this->getNtpList();
+        foreach ($ntpList as $index => $ntpHosts) {
+            $buttons[] = array([ // 生成按钮列表
+                'text' => $index,
+                'callback_data' => '/ntp ' . $this->hashGroupName($index)
+            ]);
+        }
+        return array(
+            'text' => 'Which one did you like?',
+            'reply_markup' => json_encode(array( // 列表按钮
+                'inline_keyboard' => $buttons
+            ))
+        );
+    }
+
+    public function showNtpServer($targetGroup) { // 列出指定组的NTP服务器
+        $ntpList = $this->getNtpList();
+        foreach ($ntpList as $index => $ntpHosts) {
+            if ($this->hashGroupName($index) === $targetGroup) { break; }
+        }
+        $msg = '*' . $index . '*' . PHP_EOL;
+        foreach ($ntpHosts as $ntpHost) {
+            if ($ntpHost['desc'] !== '') {
+                $msg .= $ntpHost['desc'] . '：';
+            }
+            $msg .= '`' . $ntpHost['host'] . '`' . PHP_EOL;
+        }
+        return array(
+            'parse_mode' => 'Markdown',
+            'text' => $msg,
+            'reply_markup' => json_encode(array(
+                'inline_keyboard' => array([[
+                    'text' => ' << Go back <<',
+                    'callback_data' => '/ntp servers'
+                ]])
+            ))
+        );
+    }
+}
+
 class ntpCheck {
     private $redisSetting = array( // redis缓存配置
         'host' => '127.0.0.1',
@@ -141,6 +210,19 @@ class ntpCheck {
 
 function ntpCheck($rawParam) { // NTP测试入口
     global $chatId;
+    if ($rawParam == '' || $rawParam === 'help') { // 显示使用说明
+        sendMessage($chatId, array(
+            'parse_mode' => 'Markdown',
+            'text' => '*Usage:*  `/ntp IP/Domain`',
+            'reply_markup' => json_encode(array( // 获取NTP服务列表
+                'inline_keyboard' => array([[
+                    'text' => 'Get NTP Servers',
+                    'callback_data' => '/ntp servers'
+                ]])
+            ))
+        ));
+        return;
+    }
     if ((new ntpCheck)->checkHost($rawParam)['status'] === 'error') {
         sendText($chatId, 'Illegal host'); // 输入错误
         return;
@@ -154,6 +236,20 @@ function ntpCheck($rawParam) { // NTP测试入口
         'chat_id' => $chatId,
         'message_id' => $message['result']['message_id'],
     ) + (new ntpCheck)->checkNtp($rawParam)); // 发起查询并返回结果
+}
+
+function ntpCheckCallback($rawParam) { // NTP测试回调入口
+    global $chatId, $messageId;
+    if ($rawParam === 'servers') {
+        $content = (new ntpList)->showList(); // 显示可选组
+    } else {
+        $content = (new ntpList)->showNtpServer($rawParam); // 显示指定组的服务器列表
+    }
+    sendPayload(array(
+        'method' => 'editMessageText',
+        'chat_id' => $chatId,
+        'message_id' => $messageId
+    ) + $content);
 }
 
 ?>

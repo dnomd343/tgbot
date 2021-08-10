@@ -42,6 +42,9 @@ function routeCallback($cmd, $rawParam) { // 回调请求路由
         case 'kms':
             kmsCheckCallback($rawParam);
             break;
+        case 'ntp':
+            ntpCheckCallback($rawParam);
+            break;
         case 'cfop':
             cfopPicCallback($rawParam);
             break;
