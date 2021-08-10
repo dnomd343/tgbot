@@ -1,6 +1,13 @@
 <?php
 
 class ntpCheck {
+    private $redisSetting = array( // redis缓存配置
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'passwd' => '',
+        'prefix' => 'ntp-'
+    );
+
     private function isHost($host) { // 判断host是否合法
         preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $host, $match);
         if (count($match) !== 0) { // 域名
@@ -22,6 +29,28 @@ class ntpCheck {
         $content = curl_exec($curl);
         curl_close($curl);
         return $content;
+    }
+
+    private function getRedisData($host) { // 查询Redis缓存，不存在返回NULL
+        $redis = new Redis();
+        $redis->connect($this->redisSetting['host'], $this->redisSetting['port']);
+        if ($this->redisSetting['passwd'] != '') {
+            $redis->auth($this->redisSetting['passwd']);
+        }
+        $redisKey = $this->redisSetting['prefix'] . $host;
+        $redisValue = $redis->exists($redisKey) ? $redis->get($redisKey) : NULL;
+        return $redisValue;
+    }
+    
+    private function setRedisData($host, $data, $cacheTTL) { // 写入信息到Redis缓存
+        $redis = new Redis();
+        $redis->connect($this->redisSetting['host'], $this->redisSetting['port']);
+        if ($this->redisSetting['passwd'] != '') {
+            $redis->auth($this->redisSetting['passwd']);
+        }
+        $redisKey = $this->redisSetting['prefix'] . $host;
+        $redis->set($redisKey, $data); // 写入数据库
+        $redis->pexpire($redisKey, $cacheTTL); // 设置过期时间
     }
 
     private function getNtpStatus($host) { // 获取NTP服务器状态
@@ -74,8 +103,19 @@ class ntpCheck {
         }
     }
 
+    private function ntpStatus($host) { // 检测NTP服务器状态 带缓存
+        $servers = $this->getRedisData($host); // 查询缓存数据
+        if (!$servers) { // 缓存未命中
+            $servers = $this->getNtpStatus($host); // 发起测试
+            $this->setRedisData($host, json_encode($servers), 300000); // 缓存5min
+        } else { // 缓存命中
+            $servers = json_decode($servers, true); // 使用缓存数据
+        }
+        return $servers;
+    }
+
     public function checkNtp($host) {
-        $servers = $this->getNtpStatus($host);
+        $servers = $this->ntpStatus($host);
         if (count($servers) === 0) {
             $msg = '`' . $host . '`' . PHP_EOL;
             $msg .= 'NTP Server *Offline*' . PHP_EOL . PHP_EOL;
