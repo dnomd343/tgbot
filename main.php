@@ -34,9 +34,10 @@ foreach ($cmds as $cmd) {
     if (strpos($messageText, '/' . $cmd) === 0) { // 判断请求开头
         $rawParam = substr($messageText, strlen($cmd) + 1); // 获取请求参数
         if ($isGroup && strpos($rawParam, '@' . $botAccount) === 0) {
-            $rawParam = substr($rawParam, strlen($botAccount) + 1); // 去除群组中@机器人
+            $rawParam = substr($rawParam, strlen($botAccount) + 1); // 去除群组中的@
         }
-        $rawParam = trim($rawParam); // 消除命令参数前后空格
+        if (strlen($rawParam) != 0 && substr($rawParam, 0, 1) !== ' ') { break; } // 命令后必须带空格
+        $rawParam = trim($rawParam); // 消除前后空格
         if ($isCallback) {
             routeCallback($cmd, $rawParam);
         } else {

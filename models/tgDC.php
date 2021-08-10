@@ -172,7 +172,7 @@ function tgDC($rawParam) { // DC查询入口
     }
     sendMessage($chatId, (new tgDC)->getInfo($userAccount)); // 查询并返回数据
     if ($isGroup) { return; }
-    sleep(20);
+    sleep(15);
     sendPayload(array( // 删除帮助信息
         'method' => 'deleteMessage',
         'chat_id' => $chatId,
