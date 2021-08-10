@@ -172,6 +172,15 @@ class ntpCheck {
         }
     }
 
+    private function formatOffset($str) { // 格式化Offset
+        $num = number_format($str, 6) * 1000; // s -> ms
+        $str = sprintf("%1\$.3f", $num); // 补零到小数点后3位
+        if ($num > 0) {
+            $str = '+' . $str; // 正数前加+
+        }
+        return $str . 'ms';
+    }
+
     private function ntpStatus($host) { // 检测NTP服务器状态 带缓存
         $servers = $this->getRedisData($host); // 查询缓存数据
         if (!$servers) { // 缓存未命中
@@ -198,7 +207,7 @@ class ntpCheck {
         foreach ($servers as $server) {
             $msg .= '`' . $server['Server'] . '`' . PHP_EOL;
             $msg .= '_Stratum:_ ' . $server['Stratum'] . PHP_EOL;
-            $msg .= '_Offset:_ ' . $server['Offset'] . PHP_EOL;
+            $msg .= '_Offset:_ ' . $this->formatOffset($server['Offset']) . PHP_EOL;
             $msg .= PHP_EOL;
         }
         return array(
