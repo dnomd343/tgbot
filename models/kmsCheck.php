@@ -6,7 +6,7 @@ class kmsCheck {
     private function isHost($host) { // 判断host是否合法
         preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $host, $match);
         if (count($match) !== 0) { // 域名
-            return true;
+            if (!is_numeric(substr($host, -1))) { return true; } // 域名最后一位不为数字
         }
         if (filter_var($host, \FILTER_VALIDATE_IP, \FILTER_FLAG_IPV4)) { // IPv4地址
             return true;
@@ -120,7 +120,7 @@ class kmsCheck {
 }
 
 function kmsCheck($rawParam) { // KMS测试入口
-    global $chatId, $messageId;
+    global $chatId;
     if ($rawParam == '' || $rawParam === 'help') { // 显示使用说明
         sendMessage($chatId, array(
             'parse_mode' => 'Markdown',
@@ -148,11 +148,11 @@ function kmsCheck($rawParam) { // KMS测试入口
     sendPayload(array(
         'method' => 'editMessageText',
         'chat_id' => $chatId,
-        'message_id' => $messageId,
+        'message_id' => $message['result']['message_id'],
     ) + (new kmsCheck)->checkKms($check['host'], $check['port'])); // 发起查询并返回结果
 }
 
-function kmsCheckCallback($rawParam) {
+function kmsCheckCallback($rawParam) { // KMS测试回调入口
     global $chatId, $messageId;
     $selectMsg = array(
         'text' => 'Which one did you need?',
