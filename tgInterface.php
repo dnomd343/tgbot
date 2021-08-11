@@ -7,13 +7,25 @@ class tgApi {
         ), $chatId);
     }
 
-    public function sendMessage($params, $chatId = 0) { // 发送文字消息
+    public function sendMessage($params, $chatId = 0) { // 发送消息
         if ($chatId === 0) { // 未指定chatId
             global $tgEnv;
             $chatId = $tgEnv['chatId'];
         }
         $params += array (
             'method' => 'sendMessage',
+            'chat_id' => $chatId
+        );
+        return tgApi::sendPayload($params);
+    }
+
+    public function editMessage($params, $chatId = 0) { // 修改消息
+        if ($chatId === 0) { // 未指定chatId
+            global $tgEnv;
+            $chatId = $tgEnv['chatId'];
+        }
+        $params += array (
+            'method' => 'editMessageText',
             'chat_id' => $chatId
         );
         return tgApi::sendPayload($params);
@@ -30,6 +42,7 @@ class tgApi {
         );
         return tgApi::sendPayload($params);
     }
+
     public function sendPayload($payload) { // 发送原始数据
         global $tgEnv;
         $url = $tgEnv['apiPath'] . '/' . $payload['method'] . '?';

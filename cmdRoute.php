@@ -25,7 +25,7 @@ function route($cmd, $rawParam) { // 命令请求路由
             $entry = new tgDCEntry;
             break;
         case 'kms':
-            kmsCheck($rawParam);
+            $entry = new kmsCheckEntry;
             break;
         case 'ntp':
             ntpCheck($rawParam);
@@ -38,7 +38,8 @@ function route($cmd, $rawParam) { // 命令请求路由
             break;
     }
     if ($entry) {
-        if (!$isCallback) {
+        global $tgEnv;
+        if (!$tgEnv['isCallback']) {
             $entry->query($rawParam);
         } else {
             $entry->callback($rawParam);
