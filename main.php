@@ -1,6 +1,7 @@
 <?php
 
 require_once 'cmdRoute.php';
+require_once 'redisCache.php';
 require_once 'tgInterface.php';
 
 $env = loadEnv();

@@ -1,13 +1,6 @@
 <?php
 
 class tgDC {
-    const redisSetting = array( // redis缓存配置
-        'host' => '127.0.0.1',
-        'port' => 6379,
-        'passwd' => '',
-        'prefix' => 'tgdc-'
-    );
-
     private function getDcDetail($dc) { // 获取DC信息
         switch ($dc) {
             case 'DC1':
@@ -35,36 +28,14 @@ class tgDC {
         }
     }
 
-    private function curl($url) { // curl模拟 5s超时
+    private function curl($url, $timeOut = 5) { // curl模拟 默认5s超时
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $timeOut);
         $content = curl_exec($curl);
         curl_close($curl);
         return $content;
-    }
-
-    private function getRedisData($account) { // 查询Redis缓存，不存在返回NULL
-        $redis = new Redis();
-        $redis->connect(tgDC::redisSetting['host'], tgDC::redisSetting['port']);
-        if (tgDC::redisSetting['passwd'] != '') {
-            $redis->auth(tgDC::redisSetting['passwd']);
-        }
-        $redisKey = tgDC::redisSetting['prefix'] . $account;
-        $redisValue = $redis->exists($redisKey) ? $redis->get($redisKey) : NULL;
-        return $redisValue;
-    }
-    
-    private function setRedisData($account, $data, $cacheTTL = 600000) { // 写入信息到Redis缓存
-        $redis = new Redis();
-        $redis->connect(tgDC::redisSetting['host'], tgDC::redisSetting['port']);
-        if (tgDC::redisSetting['passwd'] != '') {
-            $redis->auth(tgDC::redisSetting['passwd']);
-        }
-        $redisKey = tgDC::redisSetting['prefix'] . $account;
-        $redis->set($redisKey, $data); // 写入数据库
-        $redis->pexpire($redisKey, $cacheTTL); // 设置过期时间 默认十分钟
     }
 
     private function checkAccount($account) { // 检查用户名是否合法
@@ -78,7 +49,7 @@ class tgDC {
         return true;
     }
 
-    private function getTgUserInfo($account) { // 获取Telegram用户信息
+    private function getUserInfo($account) { // 获取Telegram用户信息
         $info['account'] = $account;
         $info['name'] = null;
         $info['dc'] = null;
@@ -86,17 +57,15 @@ class tgDC {
         $html = $this->curl('https://t.me/' . $account); // 获取原始HTML数据
         $html = preg_replace('/[\t\n\r]+/', '', $html); // 去除干扰
         if (!is_string($html) || $html == '') { return $info; } // 用户名无效
-        
         $avatarRegex = '/<img class="tgme_page_photo_image" src="([^<>]+)">/';
         $nameRegex = '/<span dir="auto">(.+?)<\/span>/';
-        preg_match_all($avatarRegex, $html, $avatarMatch); // 匹配目标头像
-        preg_match_all($nameRegex, $html, $nameMatch); // 匹配目标名称
-        
+        preg_match($avatarRegex, $html, $avatarMatch); // 匹配目标头像
+        preg_match($nameRegex, $html, $nameMatch); // 匹配目标名称
         if ($nameMatch[1]) {
-            $info['name'] = $nameMatch[1][0]; // 获取用户名
+            $info['name'] = $nameMatch[1]; // 获取用户名
         }
         if ($avatarMatch[1]) {
-            $avatarUrl = $avatarMatch[1][0]; // 获取头像链接
+            $avatarUrl = $avatarMatch[1]; // 获取头像链接
         }
         if ($avatarUrl) { // 头像存在
             $dcRegex = '/https:\/\/cdn(.+)\.telesco\.pe\//';
@@ -111,18 +80,19 @@ class tgDC {
         return $info;
     }
 
-    private function getUserInfo($account) { // 获取用户信息，带缓存
-        $info = $this->getRedisData($account); // 查询缓存数据
+    private function getUserInfoCache($account) { // 获取用户信息 带缓存
+        $redis = new redisCache('tgdc');
+        $info = $redis->getData($account); // 查询缓存数据
         if (!$info) { // 缓存未命中
-            $info = $this->getTgUserInfo($account); // 发起查询
+            $info = $this->getUserInfo($account); // 发起查询
             if (!$info['name'] && !$info['dc']) { // 用户名与头像均无
-                $cacheTTL = 120000; // 缓存2min
+                $cacheTTL = 120; // 缓存2min
             } else if ($info['name'] && !$info['dc']) { // 存在用户名但未设置头像
-                $cacheTTL = 20000; // 缓存20s
+                $cacheTTL = 20; // 缓存20s
             } else {
-                $cacheTTL = 600000; // 其余情况缓存10min
+                $cacheTTL = 3600; // 其余情况缓存1h
             }
-            $this->setRedisData($account, json_encode($info), $cacheTTL); // 缓存数据
+            $redis->setData($account, json_encode($info), $cacheTTL); // 缓存数据
         } else { // 缓存命中
             $info = json_decode($info, true); // 使用缓存数据
         }
@@ -138,7 +108,7 @@ class tgDC {
                 'text' => '用户名无效'
             );
         }
-        $info = $this->getUserInfo($account);
+        $info = $this->getUserInfoCache($account);
         if (!$info['name'] && !$info['dc']) { // 用户名与头像均无
             return array(
                 'text' => '@' . $info['account'] . ' 无法识别'
