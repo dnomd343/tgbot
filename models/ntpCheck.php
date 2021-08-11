@@ -13,7 +13,7 @@ class ntpList {
         return $res->fetchArray(SQLITE3_ASSOC)['name'];
     }
 
-    private function getNtpList() { // 获取所有NTP服务器地址
+    public function getNtpList() { // 获取所有NTP服务器地址
         $db = new ntpDB;
         $res = $db->query('SELECT * FROM `ntp_host`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
@@ -23,62 +23,16 @@ class ntpList {
         }
         return $data;
     }
-
-    private function hashGroupName($str) { // 计算组名的哈希值 取前12位
-        return substr(md5($str), 0, 12);
-    }
-
-    public function showList() { // 列出所有NTP服务器组
-        $ntpList = $this->getNtpList();
-        foreach ($ntpList as $index => $ntpHosts) {
-            $buttons[] = array([ // 生成按钮列表
-                'text' => $index,
-                'callback_data' => '/ntp ' . $this->hashGroupName($index)
-            ]);
-        }
-        return array(
-            'text' => 'Which one did you like?',
-            'reply_markup' => json_encode(array( // 列表按钮
-                'inline_keyboard' => $buttons
-            ))
-        );
-    }
-
-    public function showNtpServer($targetGroup) { // 列出指定组的NTP服务器
-        $ntpList = $this->getNtpList();
-        foreach ($ntpList as $index => $ntpHosts) {
-            if ($this->hashGroupName($index) === $targetGroup) { break; }
-        }
-        $msg = '*' . $index . '*' . PHP_EOL;
-        foreach ($ntpHosts as $ntpHost) {
-            if ($ntpHost['desc'] !== '') {
-                $msg .= $ntpHost['desc'] . '：';
-            }
-            $msg .= '`' . $ntpHost['host'] . '`' . PHP_EOL;
-        }
-        return array(
-            'parse_mode' => 'Markdown',
-            'text' => $msg,
-            'reply_markup' => json_encode(array(
-                'inline_keyboard' => array([[
-                    'text' => ' << Go back <<',
-                    'callback_data' => '/ntp servers'
-                ]])
-            ))
-        );
-    }
 }
 
 class ntpCheck {
-    private function isHost($host) { // 判断host是否合法
-        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $host, $match);
-        if (count($match) !== 0) { // 域名
-            if (!is_numeric(substr($host, -1))) { return true; } // 域名最后一位不为数字
+    private function formatOffset($str) { // 格式化Offset
+        $num = number_format($str, 6) * 1000; // s -> ms
+        $str = sprintf("%1\$.3f", $num); // 补零到小数点后3位
+        if ($num > 0) {
+            $str = '+' . $str; // 正数前加+
         }
-        if (filter_var($host, FILTER_VALIDATE_IP)) { // IP地址
-            return true;
-        }
-        return false;
+        return $str . 'ms';
     }
 
     private function curlPost($url, $data) { // curl模拟post操作 40s超时
@@ -130,29 +84,13 @@ class ntpCheck {
             if (!filter_var($group['Server'], FILTER_VALIDATE_IP)) { continue; }
             unset($group['Result']);
             unset($group['ok']);
+            $group['Offset'] = $this->formatOffset($group['Offset']); // 转换为ms
             $data[] = $group;
         }
         return ($data === null) ? array() : $data;
     }
 
-    public function checkHost($host) { // 检测host合法性
-        if ($this->isHost($host)) {
-            return array('status' => 'ok');
-        } else {
-            return array('status' => 'error');
-        }
-    }
-
-    private function formatOffset($str) { // 格式化Offset
-        $num = number_format($str, 6) * 1000; // s -> ms
-        $str = sprintf("%1\$.3f", $num); // 补零到小数点后3位
-        if ($num > 0) {
-            $str = '+' . $str; // 正数前加+
-        }
-        return $str . 'ms';
-    }
-
-    private function ntpStatus($host) { // 检测NTP服务器状态 带缓存
+    public function ntpStatus($host) { // 检测NTP服务器状态 带缓存
         $redis = new redisCache('ntp');
         $servers = $redis->getData($host); // 查询缓存数据
         if (!$servers) { // 缓存未命中
@@ -163,9 +101,66 @@ class ntpCheck {
         }
         return $servers;
     }
+}
 
-    public function checkNtp($host) {
-        $servers = $this->ntpStatus($host);
+class ntpCheckEntry {
+    private function isHost($host) { // 判断host是否合法
+        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $host, $match);
+        if (count($match) !== 0) { // 域名
+            if (!is_numeric(substr($host, -1))) { return true; } // 域名最后一位不为数字
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP)) { // IP地址
+            return true;
+        }
+        return false;
+    }
+
+    private function hashGroupName($str) { // 计算组名的哈希值 取前12位
+        return substr(md5($str), 0, 12);
+    }
+
+    private function showList() { // 列出所有NTP服务器组
+        $ntpList = (new ntpList)->getNtpList();
+        foreach ($ntpList as $index => $ntpHosts) {
+            $buttons[] = array([ // 生成按钮列表
+                'text' => $index,
+                'callback_data' => '/ntp ' . $this->hashGroupName($index)
+            ]);
+        }
+        return array(
+            'text' => 'Which one did you like?',
+            'reply_markup' => json_encode(array( // 列表按钮
+                'inline_keyboard' => $buttons
+            ))
+        );
+    }
+
+    private function showNtpServer($targetGroup) { // 列出指定组的NTP服务器
+        $ntpList = (new ntpList)->getNtpList();
+        foreach ($ntpList as $index => $ntpHosts) {
+            if ($this->hashGroupName($index) === $targetGroup) { break; }
+        }
+        $msg = '*' . $index . '*' . PHP_EOL;
+        foreach ($ntpHosts as $ntpHost) {
+            if ($ntpHost['desc'] !== '') {
+                $msg .= $ntpHost['desc'] . '：';
+            }
+            $msg .= '`' . $ntpHost['host'] . '`' . PHP_EOL;
+        }
+        return array(
+            'parse_mode' => 'Markdown',
+            'text' => $msg,
+            'reply_markup' => json_encode(array(
+                'inline_keyboard' => array([[
+                    'text' => ' << Go back <<',
+                    'callback_data' => '/ntp servers'
+                ]])
+            ))
+        );
+    }
+
+    private function checkNtp($host) { // 检查NTP服务器状态
+        $servers = (new ntpCheck)->ntpStatus($host);
         if (count($servers) === 0) {
             $msg = '`' . $host . '`' . PHP_EOL;
             $msg .= 'NTP Server *Offline*' . PHP_EOL . PHP_EOL;
@@ -179,7 +174,7 @@ class ntpCheck {
         foreach ($servers as $server) {
             $msg .= '`' . $server['Server'] . '`' . PHP_EOL;
             $msg .= '_Stratum:_ ' . $server['Stratum'] . PHP_EOL;
-            $msg .= '_Offset:_ ' . $this->formatOffset($server['Offset']) . PHP_EOL;
+            $msg .= '_Offset:_ ' . $server['Offset'] . PHP_EOL;
             $msg .= PHP_EOL;
         }
         return array(
@@ -187,50 +182,46 @@ class ntpCheck {
             'text' => $msg
         );
     }
-}
 
-function ntpCheck($rawParam) { // NTP测试入口
-    global $chatId;
-    if ($rawParam == '' || $rawParam === 'help') { // 显示使用说明
-        sendMessage($chatId, array(
+    public function query($rawParam) { // NTP测试查询入口
+        if ($rawParam == '' || $rawParam === 'help') { // 显示使用说明
+            tgApi::sendMessage(array(
+                'parse_mode' => 'Markdown',
+                'text' => '*Usage:*  `/ntp IP/Domain`',
+                'reply_markup' => json_encode(array( // 获取NTP服务列表
+                    'inline_keyboard' => array([[
+                        'text' => 'Get NTP Servers',
+                        'callback_data' => '/ntp servers'
+                    ]])
+                ))
+            ));
+            return;
+        }
+        if (!$this->isHost($rawParam)) {
+            tgApi::sendText('Illegal host'); // 输入错误
+            return;
+        }
+        $message = json_decode(tgApi::sendMessage(array(
             'parse_mode' => 'Markdown',
-            'text' => '*Usage:*  `/ntp IP/Domain`',
-            'reply_markup' => json_encode(array( // 获取NTP服务列表
-                'inline_keyboard' => array([[
-                    'text' => 'Get NTP Servers',
-                    'callback_data' => '/ntp servers'
-                ]])
-            ))
-        ));
-        return;
+            'text' => '`' . $rawParam . '`' . PHP_EOL . 'NTP Server Checking...'
+        )), true);
+        fastcgi_finish_request(); // 断开连接
+        tgApi::editMessage(array(
+            'message_id' => $message['result']['message_id'],
+        ) + $this->checkNtp($rawParam)); // 发起查询并返回结果
     }
-    if ((new ntpCheck)->checkHost($rawParam)['status'] === 'error') {
-        sendText($chatId, 'Illegal host'); // 输入错误
-        return;
-    }
-    $message = json_decode(sendMessage($chatId, array(
-        'parse_mode' => 'Markdown',
-        'text' => '`' . $rawParam . '`' . PHP_EOL . 'NTP Server Checking...'
-    )), true);
-    sendPayload(array(
-        'method' => 'editMessageText',
-        'chat_id' => $chatId,
-        'message_id' => $message['result']['message_id'],
-    ) + (new ntpCheck)->checkNtp($rawParam)); // 发起查询并返回结果
-}
 
-function ntpCheckCallback($rawParam) { // NTP测试回调入口
-    global $chatId, $messageId;
-    if ($rawParam === 'servers') {
-        $content = (new ntpList)->showList(); // 显示可选组
-    } else {
-        $content = (new ntpList)->showNtpServer($rawParam); // 显示指定组的服务器列表
+    public function callback($rawParam) { // NTP测试回调入口
+        global $tgEnv;
+        if ($rawParam === 'servers') {
+            $content = $this->showList(); // 显示可选组
+        } else {
+            $content = $this->showNtpServer($rawParam); // 显示指定组的服务器列表
+        }
+        tgApi::editMessage(array(
+            'message_id' => $tgEnv['messageId']
+        ) + $content); // 输出结果
     }
-    sendPayload(array(
-        'method' => 'editMessageText',
-        'chat_id' => $chatId,
-        'message_id' => $messageId
-    ) + $content);
 }
 
 ?>

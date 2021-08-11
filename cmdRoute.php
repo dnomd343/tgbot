@@ -28,7 +28,7 @@ function route($cmd, $rawParam) { // 命令请求路由
             $entry = new kmsCheckEntry;
             break;
         case 'ntp':
-            ntpCheck($rawParam);
+            $entry = new ntpCheckEntry;
             break;
         case 'cfop':
             cfopPic($rawParam);

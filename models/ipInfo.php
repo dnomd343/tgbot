@@ -184,6 +184,10 @@ class ipInfoEntry {
         if (filter_var($rawParam, FILTER_VALIDATE_IP)) { // 参数为IP地址
             $this->query($rawParam);
         } else { // 参数为域名
+            global $tgEnv;
+            tgApi::deleteMessage(array(
+                'message_id' => $tgEnv['messageId']
+            ));
             $ips = $this->dnsResolve($rawParam);
             foreach ($ips as $ip) {
                 $this->query($ip); // 逐个输出
