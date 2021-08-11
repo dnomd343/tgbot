@@ -20,27 +20,32 @@ class kmsCheck {
 
     public function kmsStatus($host, $port) {
         $server = $host . ':' . $port;
-        $url = $this->api . 'check?host=' . $host . '&port=' . $port;
-        $content = json_decode(file_get_contents($url), true); // 请求上游接口
-        switch ($content['status']) {
-            case 'ok':
-                return array(
-                    'status' => 'ok',
-                    'online' => true,
-                    'server' => $server
-                );
-            case 'error':
-                return array(
-                    'status' => 'ok',
-                    'online' => false,
-                    'server' => $server
-                );
-            default:
-                return array(
-                    'status' => 'error',
-                    'message' => 'Server error'
-                );
+        $redis = new redisCache('kms');
+        $info = $redis->getData($server); // 查询缓存数据
+        if (!$info) { // 缓存未命中
+            $url = $this->api . 'check?host=' . $host . '&port=' . $port;
+            $info = json_decode(file_get_contents($url), true); // 请求上游接口
+            $info['server'] = $server;
+            switch ($info['status']) {
+                case 'ok':
+                    $info['online'] = true;
+                    break;
+                case 'error':
+                    $info['online'] = false;
+                    break;
+                default:
+                    return array(
+                        'status' => 'error',
+                        'message' => 'Server error'
+                    );
+            }
+            $info['status'] = 'ok';
+            unset($info['message']);
+            $redis->setData($server, json_encode($info), 300); // 缓存5min
+        } else { // 缓存命中
+            $info = json_decode($info, true); // 使用缓存数据
         }
+        return $info;
     }
 }
 
