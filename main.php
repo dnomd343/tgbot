@@ -1,9 +1,10 @@
 <?php
 
 require_once 'cmdRoute.php';
-require_once 'redisCache.php';
-require_once 'tgInterface.php';
-require_once 'lib/Punycode.php';
+require_once 'functions/Punycode.php';
+require_once 'functions/RedisCache.php';
+require_once 'functions/TgInterface.php';
+require_once 'functions/ExtractDomain.php';
 
 $env = loadEnv();
 $apiToken = $env['BOT_TOKEN'];
