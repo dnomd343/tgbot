@@ -1,23 +1,19 @@
 <?php
 
-class cfopPic {
-    private function picList() {
+class cfopPicEntry {
+    private function getCfopMsg() {
         return array(
             'text' => 'CFOP魔方公式合集',
             'reply_markup' => json_encode(array(
                 'inline_keyboard' => array(
-                    array(
-                        array(
-                            'text' => '网页下载',
-                            'url' => 'https://res.dnomd343.top/Share/cfop/'
-                        )
-                    ),
-                    array(
-                        array(
-                            'text' => '获取全部',
-                            'callback_data' => '/cfop all'
-                        )
-                    ),
+                    array([
+                        'text' => '网页下载',
+                        'url' => 'https://res.dnomd343.top/Share/cfop/'
+                    ]),
+                    array([
+                        'text' => '获取全部',
+                        'callback_data' => '/cfop all'
+                    ]),
                     array(
                         array(
                             'text' => 'GAN',
@@ -37,58 +33,59 @@ class cfopPic {
         );
     }
 
-    private function sendPic($type) { // 返回图片文件ID
+    private function getPicId($type) { // 返回图片文件ID
         switch ($type) {
             case 'gan':
-                $fileId = 'BQACAgUAAxkBAAIBtGEOLnr4Q6D4Z_80bgfXq5xsZMeWAAKtAwACWy55VOU-SGKqc7aMIAQ';
-                break;
+                return 'BQACAgUAAxkBAAIBtGEOLnr4Q6D4Z_80bgfXq5xsZMeWAAKtAwACWy55VOU-SGKqc7aMIAQ';
             case 'mfg':
-                $fileId = 'BQACAgUAAxkBAAIB3WEOVHKeYrrGhFo-GffB0W-tQRKlAALQAwACWy55VGny8ArGMkfoIAQ';
-                break;
+                return 'BQACAgUAAxkBAAIB3WEOVHKeYrrGhFo-GffB0W-tQRKlAALQAwACWy55VGny8ArGMkfoIAQ';
             case 'yx':
-                $fileId = 'BQACAgUAAxkBAAIB32EOVISFQbgmir2abj6QkgqaSX1WAALRAwACWy55VMEuU9lCYTYWIAQ';
-                break;
+                return 'BQACAgUAAxkBAAIB32EOVISFQbgmir2abj6QkgqaSX1WAALRAwACWy55VMEuU9lCYTYWIAQ';
         }
-        return array(
-            'document' => $fileId
-        );
     }
 
-    public function getPic($type) {
+    private function getPic($type) { // 获取图片
         switch ($type) {
             case 'gan':
             case 'mfg':
             case 'yx':
-                return $this->sendPic($type);
+                return array(
+                    'document' => $this->getPicId($type)
+                );
             case '':
-                return $this->picList();
+                return $this->getCfopMsg();
             default:
                 return array(
                     'text' => '未知公式'
                 );
         }
     }
-}
 
-function cfopPic($rawParam) { // 发送CFOP图片入口
-    global $chatId;
-    sendAuto($chatId, (new cfopPic)->getPic($rawParam));
-}
-
-function cfopPicCallback($rawParam) { // 发送CFOP图片回调入口
-    global $chatId, $messageId;
-    if ($rawParam === 'all') {
-        sendAuto($chatId, (new cfopPic)->getPic('gan'));
-        sendAuto($chatId, (new cfopPic)->getPic('mfg'));
-        sendAuto($chatId, (new cfopPic)->getPic('yx'));
-        sendPayload(array( // 删除源消息
-            'method' => 'deleteMessage',
-            'chat_id' => $chatId,
-            'message_id' => $messageId
-        ));
-        return;
+    private function sendCfopPic($params) { // 发送图片或信息
+        if ($params['document']) {
+            tgApi::sendDocument($params);
+        } else {
+            tgApi::sendMessage($params);
+        }
     }
-    sendAuto($chatId, (new cfopPic)->getPic($rawParam));
+
+    public function query($rawParam) { // CFOP图片查询入口
+        $this->sendCfopPic($this->getPic($rawParam));
+    }
+
+    public function callback($rawParam) { // CFOP图片回调入口
+        if ($rawParam === 'all') {
+            global $tgEnv;
+            tgApi::deleteMessage(array( // 删除源消息
+                'message_id' => $tgEnv['messageId']
+            ));
+            $this->sendCfopPic($this->getPic('gan'));
+            $this->sendCfopPic($this->getPic('mfg'));
+            $this->sendCfopPic($this->getPic('yx'));
+            return;
+        }
+        $this->sendCfopPic($this->getPic($rawParam));
+    }
 }
 
 ?>

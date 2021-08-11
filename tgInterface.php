@@ -7,6 +7,18 @@ class tgApi {
         ), $chatId);
     }
 
+    function sendDocument($params, $chatId = 0) { // 发送文件
+        if ($chatId === 0) { // 未指定chatId
+            global $tgEnv;
+            $chatId = $tgEnv['chatId'];
+        }
+        $params += array (
+            'method' => 'sendDocument',
+            'chat_id' => $chatId
+        );
+        return tgApi::sendPayload($params);
+    }
+
     public function sendMessage($params, $chatId = 0) { // 发送消息
         if ($chatId === 0) { // 未指定chatId
             global $tgEnv;

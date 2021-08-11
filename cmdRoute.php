@@ -31,10 +31,10 @@ function route($cmd, $rawParam) { // 命令请求路由
             $entry = new ntpCheckEntry;
             break;
         case 'cfop':
-            cfopPic($rawParam);
+            $entry = new cfopPicEntry;
             break;
         case 'whois':
-            whoisQuery($rawParam);
+            $entry = new whoisQueryEntry;
             break;
     }
     if ($entry) {

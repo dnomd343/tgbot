@@ -1,7 +1,7 @@
 <?php
 
-class whoisQuery {
-    public function query($domain) {
+class whoisQueryEntry {
+    public function getWhois($domain) {
         $temp = explode('.', $domain);
         $tld = $temp[count($temp) - 1];
         $servers = array(
@@ -162,15 +162,14 @@ class whoisQuery {
         }
         return $output;
     }
-}
 
-function whoisQuery($rawParam) {
-    global $chatId;
-    $content = (new whoisQuery)->query($rawParam);
-    sendMessage($chatId, array(
-        'text' => $content,
-        'disable_web_page_preview' => 'true' // 不显示页面预览
-    ));
+    public function query($rawParam) {
+        $content = $this->getWhois($rawParam);
+        tgApi::sendMessage(array(
+            'text' => $content,
+            'disable_web_page_preview' => 'true' // 不显示页面预览
+        ));
+    }
 }
 
 ?>
