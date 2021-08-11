@@ -5,6 +5,7 @@ require_once 'models/ipInfo.php';
 require_once 'models/cfopPic.php';
 require_once 'models/kmsCheck.php';
 require_once 'models/ntpCheck.php';
+require_once 'models/icpQuery.php';
 require_once 'models/punycode.php';
 require_once 'models/whoisQuery.php';
 
@@ -13,6 +14,7 @@ $cmds = array( // 命令列表
     'dc',
     'kms',
     'ntp',
+    'icp',
     'cfop',
     'whois',
     'punycode'
@@ -31,6 +33,9 @@ function route($cmd, $rawParam) { // 命令请求路由
             break;
         case 'ntp':
             $entry = new ntpCheckEntry;
+            break;
+        case 'icp':
+            $entry = new icpQueryEntry;
             break;
         case 'cfop':
             $entry = new cfopPicEntry;
