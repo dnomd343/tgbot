@@ -1,22 +1,45 @@
 <?php
 
-class kmsCheck {
-    private $api = 'https://kms.343.re/';
+class kmsDB extends SQLite3 {
+    function __construct() {
+        $this->open('./db/kmsKeys.db'); // KMS密钥数据库
+    }
+}
 
-    public function getKmsKeys($type) {
+class kmsKeys {
+    private function getVersionName($type, $version_id) { // 获取对应版本的名称
+        $db = new kmsDB;
+        $res = $db->query('SELECT * FROM `' . $type . '_version` WHERE version_id=' . $version_id . ';');
+        return  $res->fetchArray(SQLITE3_ASSOC)['version_name'];
+    }
+    
+    private function getKmsKeys($type) { // 获取所有版本的KMS密钥
+        $db = new kmsDB;
+        $res = $db->query('SELECT * FROM `' . $type . '`;');
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $index = $row['version'];
+            unset($row['version']);
+            $data[$this->getVersionName($type, $index)][] = $row;
+        }
+        return $data;
+    }
+
+    public function getKeys($type) { // 获取指定类型KMS密钥
         switch ($type) {
             case '':
-                $url = $this->api . 'json';
-                break;
+                return $this->getKmsKeys('win') + $this->getKmsKeys('win-server');
             case 'win':
+                return $this->getKmsKeys('win');
             case 'win-server':
-                $url = $this->api . $type . '/json';
-                break;
+                return $this->getKmsKeys('win-server');
             default:
                 return array();
         }
-        return json_decode(file_get_contents($url), true);
     }
+}
+
+class kmsCheck {
+    private $api = 'https://kms.343.re/';
 
     public function kmsStatus($host, $port) {
         $server = $host . ':' . $port;
@@ -108,7 +131,7 @@ class kmsCheckEntry {
     }
 
     private function getKmsVersions($type) { // 获取win或win-server的版本列表
-        $kmsKeys = (new kmsCheck)->getKmsKeys($type);
+        $kmsKeys = (new kmsKeys)->getKeys($type);
         foreach ($kmsKeys as $version => $kmsKey) {
             $buttons[] = array([ // 生成按钮列表
                 'text' => $version,
@@ -128,7 +151,7 @@ class kmsCheckEntry {
     }
 
     private function getKmsKeys($targetVersion) { // 显示指定版本的KMS密钥列表
-        $kmsKeys = (new kmsCheck)->getKmsKeys('');
+        $kmsKeys = (new kmsKeys)->getKeys('');
         foreach ($kmsKeys as $version => $kmsKey) { // 比对压缩以后的名称
             if ($this->simpStr($version) === $targetVersion) { break; } // 匹配成功
         }
