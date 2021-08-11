@@ -7,7 +7,6 @@ require_once 'tgInterface.php';
 $env = loadEnv();
 $apiToken = $env['BOT_TOKEN'];
 $botAccount = $env['BOT_NAME'];
-
 $apiPath = 'https://api.telegram.org/bot' . $apiToken; // Telegram API接口
 $webhook = json_decode(file_get_contents("php://input"), TRUE); // Webhook接受信息
 
@@ -21,34 +20,27 @@ if ($isCallback) {
     $messageText = $webhook['message']['text'];
     $messageFrom = $webhook['message']['from'];
 }
-
 $chat = $message['chat'];
-$chatId = $chat['id'];
-$messageId = $message['message_id'];
-$isGroup = ($chat['type'] === 'group') ? true : false;
-$userId = $messageFrom['id'];
-$userName = $messageFrom['first_name'];
-$userAccount = $messageFrom['username'];
-$userLanguage = $messageFrom['language_code'];
-
 $tgEnv = array(
-    'apiPath' => $apiPath,
-    'botAccount' => $botAccount,
     'isCallback' => $isCallback,
-    'isGroup' => $isGroup,
+    'isGroup' => ($chat['type'] === 'group') ? true : false,
     'messageText' => $messageText,
-    'messageId' => $messageId,
-    'chatId' => $chatId,
-    'userId' => $userId,
-    'userName' => $userName,
-    'userAccount' => $userAccount,
-    'userLanguage' => $userLanguage
+    'messageId' => $message['message_id'],
+    'chatId' => $chat['id'],
+    'userId' => $messageFrom['id'],
+    'userName' => $messageFrom['first_name'],
+    'userAccount' => $messageFrom['username'],
+    'userLanguage' => $messageFrom['language_code']
 );
+
+// tgApi::sendPayload(array(
+//     'text' => 
+// ))
 
 foreach ($cmds as $cmd) {
     if (strpos($messageText, '/' . $cmd) === 0) { // 判断请求开头
         $rawParam = substr($messageText, strlen($cmd) + 1); // 获取请求参数
-        if ($isGroup && strpos($rawParam, '@' . $botAccount) === 0) {
+        if ($tgEnv['isGroup'] && strpos($rawParam, '@' . $botAccount) === 0) {
             $rawParam = substr($rawParam, strlen($botAccount) + 1); // 去除群组中的@
         }
         if (strlen($rawParam) != 0 && substr($rawParam, 0, 1) !== ' ') { break; } // 命令后必须带空格
