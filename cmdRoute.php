@@ -19,10 +19,10 @@ $cmds = array( // 命令列表
 function route($cmd, $rawParam) { // 命令请求路由
     switch ($cmd) {
         case 'ip':
-            ipInfo($rawParam);
+            $entry = new ipInfoEntry;
             break;
         case 'dc':
-            tgDC($rawParam);
+            $entry = new tgDCEntry;
             break;
         case 'kms':
             kmsCheck($rawParam);
@@ -37,22 +37,12 @@ function route($cmd, $rawParam) { // 命令请求路由
             whoisQuery($rawParam);
             break;
     }
-}
-
-function routeCallback($cmd, $rawParam) { // 回调请求路由
-    switch ($cmd) {
-        case 'ip':
-            ipInfoCallback($rawParam);
-            break;
-        case 'kms':
-            kmsCheckCallback($rawParam);
-            break;
-        case 'ntp':
-            ntpCheckCallback($rawParam);
-            break;
-        case 'cfop':
-            cfopPicCallback($rawParam);
-            break;
+    if ($entry) {
+        if (!$isCallback) {
+            $entry->query($rawParam);
+        } else {
+            $entry->callback($rawParam);
+        }
     }
 }
 

@@ -175,8 +175,4 @@ class tgDCEntry {
     }
 }
 
-function tgDC($rawParam) { // DC查询入口
-    (new tgDCEntry)->query($rawParam);
-}
-
 ?>

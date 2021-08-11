@@ -53,11 +53,7 @@ foreach ($cmds as $cmd) {
         }
         if (strlen($rawParam) != 0 && substr($rawParam, 0, 1) !== ' ') { break; } // 命令后必须带空格
         $rawParam = trim($rawParam); // 消除前后空格
-        if ($isCallback) {
-            routeCallback($cmd, $rawParam);
-        } else {
-            route($cmd, $rawParam);
-        }
+        route($cmd, $rawParam); // 路由命令
     }
 }
 

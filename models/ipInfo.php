@@ -3,11 +3,6 @@
 class ipInfo {
     private $apiPath = 'https://api.343.re/ip/';
 
-    public function isDomain($domain) { // 检测是否为域名
-        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $domain, $match);
-        return (count($match) != 0);
-    }
-
     private function changeCoor($num) { // 转为时分秒格式
         $stage_1 = floor($num);
         $stage_3 = ($num - $stage_1) * 60;
@@ -27,6 +22,44 @@ class ipInfo {
         return $str;
     }
 
+    public function getInfo($ip) {
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) { // IP地址不合法
+            return array(
+                'status' => 'error',
+                'message' => 'Illegal IP Address'
+            );
+        }
+        $redis = new redisCache('ip');
+        $info = $redis->getData($ip); // 查询缓存数据
+        if (!$info) { // 缓存未命中
+            $info = json_decode(file_get_contents($this->apiPath . $ip), true);
+            if ($info['status'] !== 'T') { // 上游接口错误
+                return array(
+                    'status' => 'error',
+                    'message' => 'Server Error'
+                );
+            }
+            unset($info['status']);
+            if ($info['loc'] != NULL) {
+                $info['locCoor'] = $this->coorFormat($info['loc']); // 转换为经纬度格式
+            }
+            $redis->setData($ip, json_encode($info), 1800); // 缓存30min
+        } else { // 缓存命中
+            $info = json_decode($info, true); // 使用缓存数据
+        }
+        return array(
+            'status' => 'ok',
+            'data' => json_encode($info) // 返回查询结果
+        );
+    }
+}
+
+class ipInfoEntry {
+    private function isDomain($domain) { // 检测是否为域名
+        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $domain, $match);
+        return (count($match) != 0);
+    }
+    
     private function dnsResolveIPv4($domain) { // DNS解析A记录
         $ipAddr = array();
         $rs = dns_get_record(strtolower($domain), DNS_A);
@@ -45,7 +78,7 @@ class ipInfo {
         return $ipAddr;
     }
     
-    public function dnsResolve($domain) { // DNS解析IP记录
+    private function dnsResolve($domain) { // DNS解析IP记录
         $ipAddr = array();
         $ipv4 = $this->dnsResolveIPv4($domain);
         foreach ($ipv4 as $ip) {
@@ -58,18 +91,14 @@ class ipInfo {
         return $ipAddr;
     }
 
-    public function getInfo($ip) {
-        if (!filter_var($ip, FILTER_VALIDATE_IP)) { // IP地址不合法
+    private function getInfo($ip) {
+        $content = (new ipInfo)->getInfo($ip); // 发起查询
+        if ($content['status'] !== 'ok') {
             return array(
-                'text' => 'Illegal IP Address'
+                'text' => $content['message'] // 返回错误信息
             );
         }
-        $info = json_decode(file_get_contents($this->apiPath . $ip), true);
-        if ($info['status'] !== 'T') { // 上游接口错误
-            return array(
-                'text' => 'Server Error'
-            );
-        }
+        $info = json_decode($content['data'], true);
         $msg = '<b>IP:</b> <code>' . $info['ip'] . '</code>' . PHP_EOL;
         if ($info['as'] != NULL) {
             $msg .= '<b>AS:</b> <a href="https://bgpview.io/asn/' . substr($info['as'], 2) . '">';
@@ -78,7 +107,7 @@ class ipInfo {
         if ($info['loc'] != NULL) {
             $msg .= '<b>Location:</b> <a href="https://earth.google.com/web/@';
             $msg .= $info['loc'] . ',9.963a,7999.357d,35y,-34.3h,45t,0r/data=KAI">';
-            $msg .= $this->coorFormat($info['loc']) . '</a>' . PHP_EOL;
+            $msg .= $info['locCoor'] . '</a>' . PHP_EOL;
         }
         if ($info['city'] != NULL) { $msg .= '<b>City:</b> ' . $info['city'] . PHP_EOL; }
         if ($info['region'] != NULL) { $msg .= '<b>Region:</b> ' . $info['region'] . PHP_EOL; }
@@ -99,31 +128,32 @@ class ipInfo {
             ))
         );
     }
-}
 
-function ipInfo($rawParam) { // IP查询入口
-    global $chatId;
-    if ($rawParam == '' || $rawParam === 'help') { // 显示使用说明
-        sendMessage($chatId, array(
-            'parse_mode' => 'Markdown',
-            'text' => '*Usage:*  `/ip IPv4/IPv6/Domain`',
-            'reply_markup' => json_encode(array( // 显示echoIP按钮
-                'inline_keyboard' => array([[
-                    'text' => 'Get my IP address',
-                    'url' => 'https://ip.dnomd343.top/'
-                ]])
-            ))
-        ));
-        return;
-    }
-    if (filter_var($rawParam, FILTER_VALIDATE_IP)) { // 参数为IP地址
-        sendMessage($chatId, (new ipInfo)->getInfo($rawParam));
-        return;
-    }
-    if ((new ipInfo)->isDomain($rawParam)) {
-        $ips = (new ipInfo)->dnsResolve($rawParam);
+    public function query($rawParam) { // ipInfo查询入口
+        if ($rawParam == '' || $rawParam === 'help') { // 显示使用说明
+            tgApi::sendMessage(array(
+                'parse_mode' => 'Markdown',
+                'text' => '*Usage:*  `/ip IPv4/IPv6/Domain`',
+                'reply_markup' => json_encode(array( // 显示echoIP按钮
+                    'inline_keyboard' => array([[
+                        'text' => 'Get my IP address',
+                        'url' => 'https://ip.dnomd343.top/'
+                    ]])
+                ))
+            ));
+            return;
+        }
+        if (filter_var($rawParam, FILTER_VALIDATE_IP)) { // 参数为IP地址
+            tgApi::sendMessage($this->getInfo($rawParam)); // 发起查询
+            return;
+        }
+        if (!$this->isDomain($rawParam)) {
+            tgApi::sendText('Illegal Request'); // 非法请求
+            return;
+        }
+        $ips = $this->dnsResolve($rawParam);
         if (count($ips) == 0) { // 解析不到IP记录
-            sendMessage($chatId,  array(
+            tgApi::sendMessage($chatId,  array(
                 'parse_mode' => 'Markdown',
                 'text' => 'Nothing found of `' . $rawParam . '`'
             ));
@@ -141,7 +171,7 @@ function ipInfo($rawParam) { // IP查询入口
                 'callback_data' => '/ip ' . $rawParam
             ]);
         }
-        sendMessage($chatId,  array(
+        tgApi::sendMessage(array(
             'parse_mode' => 'Markdown',
             'text' => 'DNS resolve of `' . $rawParam . '`',
             'reply_markup' => json_encode(array( // 显示IP列表按钮
@@ -149,17 +179,15 @@ function ipInfo($rawParam) { // IP查询入口
             ))
         ));
     }
-}
 
-function ipInfoCallback($rawParam) { // IP查询回调入口
-    global $chatId;
-    $content = explode(',', $rawParam);
-    if (filter_var($rawParam, FILTER_VALIDATE_IP)) { // 参数为IP地址
-        ipInfo($rawParam);
-    } else { // 参数为域名
-        $ips = (new ipInfo)->dnsResolve($rawParam);
-        foreach ($ips as $ip) {
-            ipInfo($ip); // 逐个输出
+    public function callback($rawParam) { // ipInfo回调入口
+        if (filter_var($rawParam, FILTER_VALIDATE_IP)) { // 参数为IP地址
+            $this->query($rawParam);
+        } else { // 参数为域名
+            $ips = $this->dnsResolve($rawParam);
+            foreach ($ips as $ip) {
+                $this->query($ip); // 逐个输出
+            }
         }
     }
 }
