@@ -3,6 +3,7 @@
 require_once 'cmdRoute.php';
 require_once 'redisCache.php';
 require_once 'tgInterface.php';
+require_once 'lib/Punycode.php';
 
 $env = loadEnv();
 $apiToken = $env['BOT_TOKEN'];
@@ -32,10 +33,6 @@ $tgEnv = array(
     'userAccount' => $messageFrom['username'],
     'userLanguage' => $messageFrom['language_code']
 );
-
-// tgApi::sendPayload(array(
-//     'text' => 
-// ))
 
 foreach ($cmds as $cmd) {
     if (strpos($messageText, '/' . $cmd) === 0) { // 判断请求开头

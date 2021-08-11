@@ -2,7 +2,7 @@
 
 class ntpDB extends SQLite3 {
     public function __construct() {
-        $this->open('./models/ntpServer.db'); // NTP服务器数据库
+        $this->open('./db/ntpServer.db'); // NTP服务器数据库
     }
 }
 
