@@ -29,7 +29,7 @@ class punycodeEntry {
     public function query($rawParam) { // Punycode转换查询入口
         $encode = $this->encode($rawParam);
         $decode = $this->decode($rawParam);
-        if ($decode['data'] === $rawParam) { // 输入为明文
+        if ($decode['data'] === strtolower($rawParam)) { // 输入为明文
             $msg = '`' . $encode['data'] . '`' . PHP_EOL;
             if ($encode['status'] !== 'ok') {
                 $errMsg = $encode['message'];

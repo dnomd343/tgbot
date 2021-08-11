@@ -87,7 +87,7 @@ class Punycode {
         $length = strlen($output);
         if ($length > 255) {
             $this->errFlag = true;
-            $this->errMsg = 'A full domain name is limited to 255 octets (including the separators), ' . $length . 'given.';
+            $this->errMsg = 'A full domain name is limited to 255 octets (including the separators), ' . $length . ' given.';
         }
 
         return $output;
