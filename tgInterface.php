@@ -1,5 +1,45 @@
 <?php
 
+class tgApi {
+    public function sendText($msg, $chatId = 0) { // 发送纯文本
+        return tgApi::sendMessage(array(
+            'text' => $msg
+        ), $chatId);
+    }
+
+    public function sendMessage($params, $chatId = 0) { // 发送文字消息
+        if ($chatId === 0) { // 未指定chatId
+            global $tgEnv;
+            $chatId = $tgEnv['chatId'];
+        }
+        $params += array (
+            'method' => 'sendMessage',
+            'chat_id' => $chatId
+        );
+        return tgApi::sendPayload($params);
+    }
+
+    public function deleteMessage($params, $chatId = 0) { // 删除消息
+        if ($chatId === 0) { // 未指定chatId
+            global $tgEnv;
+            $chatId = $tgEnv['chatId'];
+        }
+        $params += array (
+            'method' => 'deleteMessage',
+            'chat_id' => $chatId
+        );
+        return tgApi::sendPayload($params);
+    }
+    public function sendPayload($payload) { // 发送原始数据
+        global $tgEnv;
+        $url = $tgEnv['apiPath'] . '/' . $payload['method'] . '?';
+        foreach ($payload as $param => $content) {
+            $url .= '&' . $param . '=' . urlencode($content);
+        }
+        return file_get_contents($url);
+    }
+}
+
 function sendPayload($payload) { // 发送API请求
     global $apiPath;
     $url = $apiPath . '/' . $payload['method'] . '?';

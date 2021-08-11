@@ -99,55 +99,84 @@ class tgDC {
         return $info;
     }
 
-    public function getInfo($account) { // 外部调用入口
-        if (substr($account, 0, 1) === '@') { // 用户名前可带有@
+    public function getInfo($account) { // 查询入口
+        if (substr($account, 0, 1) === '@') { // 用户名可带有@
             $account = substr($account, 1);
         }
         if (!$this->checkAccount($account)) { // 用户名不合法
             return array(
-                'text' => '用户名无效'
+                'status' => 'error',
+                'message' => '用户名无效'
             );
         }
         $info = $this->getUserInfoCache($account);
         if (!$info['name'] && !$info['dc']) { // 用户名与头像均无
             return array(
-                'text' => '@' . $info['account'] . ' 无法识别'
+                'status' => 'error',
+                'message' => '@' . $account . ' 无法识别'
             );
         } else if ($info['name'] && !$info['dc']) { // 存在用户名但未设置头像
             return array(
-                'text' => '@' . $info['account'] . ' 未设置头像或不可见'
+                'status' => 'error',
+                'message' => '@' . $account . ' 未设置头像或不可见'
             );
         }
-        $msg = '@' . $info['account'] . ' (' . $info['name'] . ')' . PHP_EOL;
-        $msg .= '<i>' . $info['as'] . '</i> <code>(' . $info['ip'] . ')</code>' . PHP_EOL;
-        $msg .= '<b>' . $info['dc'] . '</b> - ' . $info['addr'] . PHP_EOL;
         return array(
-            'parse_mode' => 'HTML', // HTML格式输出
-            'text' => $msg
+            'status' => 'ok',
+            'data' => json_encode($info) // 返回查询结果
         );
     }
 }
 
-function tgDC($rawParam) { // DC查询入口
-    global $chatId, $userAccount, $isGroup;
-    if ($rawParam !== '') { // 请求不为空
-        sendMessage($chatId, (new tgDC)->getInfo($rawParam)); // 查询并返回数据
-        return;
+class tgDCEntry {
+    private function getInfo($account) {
+        $content = (new tgDC)->getInfo($account); // 发起查询
+        if ($content['status'] === 'ok') {
+            $info = json_decode($content['data'], true);
+            $msg = '@' . $info['account'] . ' (' . $info['name'] . ')' . PHP_EOL;
+            $msg .= '<i>' . $info['as'] . '</i> ';
+            $msg .= '<code>(' . $info['ip'] . ')</code>' . PHP_EOL;
+            $msg .= '<b>' . $info['dc'] . '</b> - ' . $info['addr'] . PHP_EOL;
+            return array(
+                'parse_mode' => 'HTML', // HTML格式输出
+                'text' => $msg
+            );
+        } else {
+            return array(
+                'text' => $content['message'] // 返回错误信息
+            );
+        }
     }
-    if (!$isGroup) { // 群组不发送帮助信息
-        $message = json_decode(sendMessage($chatId, array( // 发送帮助信息
+
+    public function query($rawParam) { // tgDC查询入口
+        $helpMsg = array( // 使用说明
             'parse_mode' => 'Markdown',
             'text' => '*Usage:*  `/dc username`'
-        )), true);
+        );
+        if ($rawParam === 'help') { // 查询使用说明
+            tgApi::sendMessage($helpMsg);
+            return;
+        }
+        if ($rawParam !== '') { // 查询指定用户数据
+            tgApi::sendMessage($this->getInfo($rawParam));
+            return;
+        }
+        global $tgEnv;
+        if (!$tgEnv['isGroup']) { // 群组不发送帮助信息
+            $message = json_decode(tgApi::sendMessage($helpMsg), true); // 发送使用说明
+        }
+        tgApi::sendMessage($this->getInfo($tgEnv['userAccount'])); // 查询对方用户名
+        if ($tgEnv['isGroup']) { return; }
+        fastcgi_finish_request(); // 断开连接
+        sleep(10); // 延迟10s
+        tgApi::deleteMessage(array( // 删除使用说明
+            'message_id' => $message['result']['message_id']
+        ));
     }
-    sendMessage($chatId, (new tgDC)->getInfo($userAccount)); // 查询并返回数据
-    if ($isGroup) { return; }
-    sleep(15);
-    sendPayload(array( // 删除帮助信息
-        'method' => 'deleteMessage',
-        'chat_id' => $chatId,
-        'message_id' => $message['result']['message_id']
-    ));
+}
+
+function tgDC($rawParam) { // DC查询入口
+    (new tgDCEntry)->query($rawParam);
 }
 
 ?>

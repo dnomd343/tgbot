@@ -31,6 +31,20 @@ $userName = $messageFrom['first_name'];
 $userAccount = $messageFrom['username'];
 $userLanguage = $messageFrom['language_code'];
 
+$tgEnv = array(
+    'apiPath' => $apiPath,
+    'botAccount' => $botAccount,
+    'isCallback' => $isCallback,
+    'isGroup' => $isGroup,
+    'messageText' => $messageText,
+    'messageId' => $messageId,
+    'chatId' => $chatId,
+    'userId' => $userId,
+    'userName' => $userName,
+    'userAccount' => $userAccount,
+    'userLanguage' => $userLanguage
+);
+
 foreach ($cmds as $cmd) {
     if (strpos($messageText, '/' . $cmd) === 0) { // 判断请求开头
         $rawParam = substr($messageText, strlen($cmd) + 1); // 获取请求参数
