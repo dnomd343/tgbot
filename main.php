@@ -51,7 +51,10 @@ function loadEnv() { // 载入环境变量
     $file = fopen('.env', 'r');
     $data = array();
     while (!feof($file)) { // 逐行读入文件
-        $record = explode('=', trim(fgets($file)));
+        $raw = trim(fgets($file));
+        if ($raw == '') { continue; } // 跳过空行
+        if (substr($raw, 0, 1) === '#') { continue; } // 跳过注释
+        $record = explode('=', $raw);
         if (count($record) === 2) { // 合法记录
             $data[$record[0]] = $record[1];
         }

@@ -1,16 +1,18 @@
 <?php
 
 class redisCache {
-    private $redisSetting = array( // redis接口
-        'host' => '127.0.0.1',
-        'port' => 6379,
-        'passwd' => ''
-    );
+    private $redisSetting = array(); // redis接口参数
 
-    public function __construct($prefix) { // 类构建时指定前缀 
-        $this->redisSetting['prefix'] = 'tgbot-' . $prefix . '-';
+    public function __construct($prefix) { // 类初始化
+        global $env;
+        $this->redisSetting = array(
+            'host' => $env['REDIS_HOST'],
+            'port' => $env['REDIS_PORT'],
+            'passwd' => $env['REDIS_PASSWD'],
+            'prefix' => $env['REDIS_PREFIX'] . '-' . $prefix . '-'
+        );
     }
-
+    
     public function getData($key) { // 查询Redis缓存，不存在返回NULL
         $redis = new Redis();
         $redis->connect($this->redisSetting['host'], $this->redisSetting['port']);
