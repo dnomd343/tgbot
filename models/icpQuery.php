@@ -50,6 +50,26 @@ class icpQuery {
 }
 
 class icpQueryEntry {
+    private function getIcpTlds() { // 获取所有可ICP备案的顶级域
+        $db = new icpDB;
+        $punycode = new Punycode();
+        $res = $db->query('SELECT tld FROM `tlds`;');
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $tlds[] = $punycode->encode($row['tld']); // 转为Punycode编码
+        }
+        return $tlds; // Unicode字符使用Punycode编码
+    }
+
+    private function isIcpEnable($tld) { // 检查TLD是否允许ICP备案
+        $icpTlds = $this->getIcpTlds();
+        foreach ($icpTlds as $icpTld) { // 遍历所有可ICP域名
+            if ($icpTld === $tld) {
+                return true; // 允许备案
+            }
+        }
+        return false; // 无法备案
+    }
+
     private function check($str) { // 检查输入参数
         $content = (new extractDomain)->analyse($str);
         if (!isset($content['domain'])) { // 格式错误
@@ -62,6 +82,12 @@ class icpQueryEntry {
             return array(
                 'status' => 'error',
                 'message' => 'Unknow TLD'
+            );
+        }
+        if (!$this->isIcpEnable($content['tld'])) {
+            return array(
+                'status' => 'error',
+                'message' => '`' . $content['tld'] . '` is not allowed in ICP'
             );
         }
         return array(
@@ -80,7 +106,10 @@ class icpQueryEntry {
         }
         $content = $this->check($rawParam);
         if ($content['status'] !== 'ok') { // 请求参数错误
-            tgApi::sendText($content['message']);
+            tgApi::sendMessage(array(
+                'parse_mode' => 'Markdown',
+                'text' => $content['message']
+            ));
             return;
         }
         $domain = $content['domain'];
