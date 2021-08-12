@@ -6,12 +6,33 @@ class tldDB extends SQLite3 {
     }
 }
 
+class icpDB extends SQLite3 {
+    function __construct() {
+        $this->open('./db/icpTlds.db'); // 顶级域名数据库
+    }
+}
+
 class extractDomain {
     private function getAllTlds() { // 获取所有顶级域 含次级域
         $db = new tldDB;
         $res = $db->query('SELECT tld FROM `tlds`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             $tlds[] = $row['tld'];
+        }
+        $tlds = array_merge($tlds, $this->getIcpTlds());
+        $tlds = array_unique($tlds);
+        foreach ($tlds as $tld) {
+            echo $tld . PHP_EOL;
+        }
+        return $tlds; // Unicode字符使用Punycode编码
+    }
+
+    private function getIcpTlds() { // 获取所有可ICP备案的顶级域
+        $db = new icpDB;
+        $punycode = new Punycode();
+        $res = $db->query('SELECT tld FROM `tlds`;');
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $tlds[] = $punycode->encode($row['tld']); // 转为Punycode编码
         }
         return $tlds; // Unicode字符使用Punycode编码
     }

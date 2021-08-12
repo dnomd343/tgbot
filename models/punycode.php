@@ -41,7 +41,9 @@ class punycodeEntry {
             }
         }
         if (isset($errMsg)) { // 存在警告
-            $msg .= '*Warning:* ' . $errMsg;
+            if (substr($rawParam, 0, 1) !== '.' && substr($rawParam, -1) !== '.') { // 首尾不为.
+                $msg .= '*Warning:* ' . $errMsg;
+            }
         }
         tgApi::sendMessage(array(
             'parse_mode' => 'Markdown',

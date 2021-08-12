@@ -98,10 +98,10 @@ class icpQueryEntry {
         }
         $msg = '`' . $domain . '`' . PHP_EOL;
         $msg .= '*类型：*' . $info['CompanyType'] . PHP_EOL;
-        if ($info['Owner'] != '') { // 负责人不为空
+        if ($info['Owner'] != '') { // 负责人为空不显示
             $msg .= '*负责人：*' . $info['Owner'] . PHP_EOL;
         }
-        if ($info['Owner'] != $info['CompanyName']) { // 名称与负责人不重复
+        if ($info['Owner'] != $info['CompanyName']) { // 名称与负责人重复时不显示
             $msg .= '*名称：*' . $info['CompanyName'] . PHP_EOL;
         }
         $msg .= '*主页：*';
