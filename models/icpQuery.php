@@ -9,6 +9,7 @@ class icpQuery {
     }
 
     private function getIcpInfo($domain) { // ICP备案查询
+        $domain = urlencode((new Punycode)->decode($domain));
         $info = json_decode(file_get_contents($this->apiPath . $domain), true);
         if ($info['StateCode'] === 1) { // 存在ICP备案
             $info = array(
@@ -16,6 +17,12 @@ class icpQuery {
                 'hasIcp' => true
             ) + $info['Result'];
         } else if ($info['StateCode'] === 0) { // 无ICP备案
+            if ($info['Reason'] !== '暂无备案信息') {
+                return array(
+                    'status' => 'error',
+                    'message' => $info['Reason']
+                );
+            }
             $info = array(
                 'status' => 'ok',
                 'hasIcp' => false,
@@ -28,6 +35,12 @@ class icpQuery {
             );
         }
         return $info;
+    }
+
+    public function isCache($domain) { // 查询域名是否存在缓存
+        $redis = new redisCache('icp');
+        $info = $redis->getData($domain); // 查询缓存数据
+        return ($info) ? true : false;
     }
 
     public function icpInfo($domain) { // ICP查询入口 带缓存
@@ -112,20 +125,42 @@ class icpQueryEntry {
             ));
             return;
         }
+        $isCache = true;
         $domain = $content['domain'];
+        $msg = '`' . (new Punycode)->decode($domain) . '`' . PHP_EOL;
+        if (!(new icpQuery)->isCache($domain)) { // 域名信息未缓存
+            $message = json_decode(tgApi::sendMessage(array(
+                'parse_mode' => 'Markdown',
+                'text' => $msg . 'ICP备案信息查询中...'
+            )), true);
+            $isCache = false;
+        }
         $info = (new icpQuery)->icpInfo($domain); // 发起查询
         if ($info['status'] !== 'ok') {
-            tgApi::sendText($info['message']); // 查询出错
+            if ($isCache) { // 没有缓冲信息 直接发送
+                tgApi::sendText($info['message']); // 查询出错
+            } else {
+                tgApi::editMessage(array(
+                    'text' => $info['message'],
+                    'message_id' => $message['result']['message_id']
+                ));
+            }
             return;
         }
         if (!$info['hasIcp']) { // 没有ICP备案
-            tgApi::sendMessage(array(
+            $content = array(
                 'parse_mode' => 'Markdown',
-                'text' => '`' . $domain . '`' . PHP_EOL . $info['icpMsg']
-            ));
+                'text' => $msg . $info['icpMsg']
+            );
+            if ($isCache) { // 没有缓冲信息 直接发送
+                tgApi::sendMessage($content);
+            } else {
+                tgApi::editMessage(array(
+                    'message_id' => $message['result']['message_id']
+                ) + $content);
+            }
             return;
         }
-        $msg = '`' . $domain . '`' . PHP_EOL;
         $msg .= '*类型：*' . $info['CompanyType'] . PHP_EOL;
         if ($info['Owner'] != '') { // 负责人为空不显示
             $msg .= '*负责人：*' . $info['Owner'] . PHP_EOL;
@@ -142,10 +177,19 @@ class icpQueryEntry {
         $msg .= '*网站名：*' . $info['SiteName'] . PHP_EOL;
         $msg .= '*审核时间：*' . $info['VerifyTime'] . PHP_EOL;
         $msg .= '*许可证号：*' . $info['SiteLicense'] . PHP_EOL;
-        tgApi::sendMessage(array( // 返回查询数据
-            'parse_mode' => 'Markdown',
-            'text' => $msg
-        ));
+        if ($isCache) { // 没有缓冲信息 直接发送
+            tgApi::sendMessage(array( // 返回查询数据
+                'parse_mode' => 'Markdown',
+                'text' => $msg
+            ));
+        } else {
+            tgApi::editMessage(array( // 返回查询数据 修改原消息
+                'parse_mode' => 'Markdown',
+                'text' => $msg,
+                'message_id' => $message['result']['message_id']
+            ));
+        }
+        
     }
 }
 
