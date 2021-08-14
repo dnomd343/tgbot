@@ -86,7 +86,7 @@ class tgDC {
         if (!$info) { // 缓存未命中
             $info = $this->getUserInfo($account); // 发起查询
             if (!$info['name'] && !$info['dc']) { // 用户名与头像均无
-                $cacheTTL = 120; // 缓存2min
+                $cacheTTL = 300; // 缓存5min
             } else if ($info['name'] && !$info['dc']) { // 存在用户名但未设置头像
                 $cacheTTL = 20; // 缓存20s
             } else {
@@ -135,7 +135,7 @@ class tgDCEntry {
             $info = json_decode($content['data'], true);
             $msg = '@' . $info['account'] . ' (' . $info['name'] . ')' . PHP_EOL;
             $msg .= '<i>' . $info['as'] . '</i> ';
-            $msg .= '<code>(' . $info['ip'] . ')</code>' . PHP_EOL;
+            $msg .= '<code>(</code><code>' . $info['ip'] . '</code><code>)</code>' . PHP_EOL;
             $msg .= '<b>' . $info['dc'] . '</b> - ' . $info['addr'] . PHP_EOL;
             return array(
                 'parse_mode' => 'HTML', // HTML格式输出

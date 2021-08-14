@@ -52,7 +52,7 @@ class icpQuery {
                 return $info;
             }
             unset($info['status']);
-            $redis->setData($domain, json_encode($info), 30 * 86400); // 缓存30day
+            $redis->setData($domain, json_encode($info), 90 * 86400); // 缓存90day
         } else { // 缓存命中
             $info = json_decode($info, true); // 使用缓存数据
         }
