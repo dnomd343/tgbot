@@ -2,6 +2,7 @@
 
 require_once 'cmdRoute.php';
 require_once 'functions/Punycode.php';
+require_once 'functions/SqliteDB.php';
 require_once 'functions/RedisCache.php';
 require_once 'functions/TgInterface.php';
 require_once 'functions/ExtractDomain.php';

@@ -1,20 +1,11 @@
 <?php
 
-class tldDB extends SQLite3 {
-    function __construct() {
-        $this->open('./db/allTlds.db'); // 顶级域名数据库
-    }
-}
-
-class icpDB extends SQLite3 {
-    function __construct() {
-        $this->open('./db/icpTlds.db'); // 顶级域名数据库
-    }
-}
-
 class extractDomain {
+    private $tldDB = './db/allTlds.db'; // 顶级域名数据库
+    private $icpDB = './db/icpTlds.db'; // ICP备案数据库
+
     private function getAllTlds() { // 获取所有顶级域 含次级域
-        $db = new tldDB;
+        $db = new SqliteDB($this->tldDB);
         $res = $db->query('SELECT tld FROM `tlds`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             $tlds[] = $row['tld'];
@@ -28,7 +19,7 @@ class extractDomain {
     }
 
     private function getIcpTlds() { // 获取所有可ICP备案的顶级域
-        $db = new icpDB;
+        $db = new SqliteDB($this->icpDB);
         $punycode = new Punycode();
         $res = $db->query('SELECT tld FROM `tlds`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {

@@ -1,20 +1,16 @@
 <?php
 
-class ntpDB extends SQLite3 {
-    public function __construct() {
-        $this->open('./db/ntpServer.db'); // NTP服务器数据库
-    }
-}
-
 class ntpList {
+    private $ntpDB = './db/ntpServer.db'; // NTP服务器数据库
+
     private function getListName($list_id) { // 获取对应组的名称
-        $db = new ntpDB;
+        $db = new SqliteDB($this->ntpDB);
         $res = $db->query('SELECT * FROM `ntp_list` WHERE id=' . $list_id . ';');
         return $res->fetchArray(SQLITE3_ASSOC)['name'];
     }
 
     public function getNtpList() { // 获取所有NTP服务器地址
-        $db = new ntpDB;
+        $db = new SqliteDB($this->ntpDB);
         $res = $db->query('SELECT * FROM `ntp_host`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             $index = $row['list_id'];

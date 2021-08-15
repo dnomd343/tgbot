@@ -1,20 +1,15 @@
 <?php
 
-class kmsDB extends SQLite3 {
-    function __construct() {
-        $this->open('./db/kmsKeys.db'); // KMS密钥数据库
-    }
-}
-
 class kmsKeys {
+    private $kmsDB = './db/kmsKeys.db'; // KMS密钥数据库
     private function getVersionName($type, $version_id) { // 获取对应版本的名称
-        $db = new kmsDB;
+        $db = new SqliteDB($this->kmsDB);
         $res = $db->query('SELECT * FROM `' . $type . '_version` WHERE version_id=' . $version_id . ';');
         return  $res->fetchArray(SQLITE3_ASSOC)['version_name'];
     }
     
     private function getKmsKeys($type) { // 获取所有版本的KMS密钥
-        $db = new kmsDB;
+        $db = new SqliteDB($this->kmsDB);
         $res = $db->query('SELECT * FROM `' . $type . '`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             $index = $row['version'];
