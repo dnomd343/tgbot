@@ -201,10 +201,8 @@ class ntpCheckEntry {
             tgApi::sendText('Illegal host'); // 输入错误
             return;
         }
-        $message = json_decode(tgApi::sendMessage(array(
-            'parse_mode' => 'Markdown',
-            'text' => '`' . $rawParam . '`' . PHP_EOL . 'NTP Server Checking...'
-        )), true);
+        $message = tgApi::sendMarkdown('`' . $rawParam . '`' . PHP_EOL . 'NTP Server Checking...');
+        $message = json_decode($message, true);
         fastcgi_finish_request(); // 断开连接
         tgApi::editMessage(array(
             'message_id' => $message['result']['message_id'],

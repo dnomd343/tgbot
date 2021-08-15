@@ -119,20 +119,15 @@ class icpQueryEntry {
         }
         $content = $this->check($rawParam);
         if ($content['status'] !== 'ok') { // 请求参数错误
-            tgApi::sendMessage(array(
-                'parse_mode' => 'Markdown',
-                'text' => $content['message']
-            ));
+            tgApi::sendMarkdown($content['message']);
             return;
         }
         $isCache = true;
         $domain = $content['domain'];
         $msg = '`' . (new Punycode)->decode($domain) . '`' . PHP_EOL;
         if (!(new icpQuery)->isCache($domain)) { // 域名信息未缓存
-            $message = json_decode(tgApi::sendMessage(array(
-                'parse_mode' => 'Markdown',
-                'text' => $msg . 'ICP备案信息查询中...'
-            )), true);
+            $message = tgApi::sendMarkdown($msg . 'ICP备案信息查询中...');
+            $message = json_decode($message, true);
             $isCache = false;
         }
         $info = (new icpQuery)->icpInfo($domain); // 发起查询
@@ -178,10 +173,7 @@ class icpQueryEntry {
         $msg .= '*审核时间：*' . $info['VerifyTime'] . PHP_EOL;
         $msg .= '*许可证号：*' . $info['SiteLicense'] . PHP_EOL;
         if ($isCache) { // 没有缓冲信息 直接发送
-            tgApi::sendMessage(array( // 返回查询数据
-                'parse_mode' => 'Markdown',
-                'text' => $msg
-            ));
+            tgApi::sendMarkdown($msg); // 返回查询数据
         } else {
             tgApi::editMessage(array( // 返回查询数据 修改原消息
                 'parse_mode' => 'Markdown',

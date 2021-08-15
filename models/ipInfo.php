@@ -153,10 +153,7 @@ class ipInfoEntry {
         }
         $ips = $this->dnsResolve($rawParam);
         if (count($ips) == 0) { // 解析不到IP记录
-            tgApi::sendMessage($chatId,  array(
-                'parse_mode' => 'Markdown',
-                'text' => 'Nothing found of `' . $rawParam . '`'
-            ));
+            tgApi::sendMarkdown('Nothing found of `' . $rawParam . '`');
             return;
         }
         foreach ($ips as $ip) {

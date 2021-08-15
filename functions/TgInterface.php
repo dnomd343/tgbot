@@ -5,6 +5,13 @@ class tgApi {
         return tgApi::sendMessage(['text' => $msg], $chatId);
     }
 
+    public function sendMarkdown($msg, $chatId = 0) { // 发送Markdown格式消息
+        return tgApi::sendMessage(array(
+            'text' => $msg,
+            'parse_mode' => 'Markdown',
+        ), $chatId);
+    }
+
     public function sendMessage($params, $chatId = 0) { // 发送消息
         return tgApi::sendByMethod('sendMessage', $params, $chatId);
     }

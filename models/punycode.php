@@ -45,10 +45,7 @@ class punycodeEntry {
                 $msg .= '*Warning:* ' . $errMsg;
             }
         }
-        tgApi::sendMessage(array(
-            'parse_mode' => 'Markdown',
-            'text' => $msg
-        ));
+        tgApi::sendMarkdown($msg);
     }
 }
 

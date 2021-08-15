@@ -205,10 +205,8 @@ class kmsCheckEntry {
             tgApi::sendText($check['message']);
             return;
         }
-        $message = json_decode(tgApi::sendMessage(array(
-            'parse_mode' => 'Markdown',
-            'text' => '`' . $rawParam . '`' . PHP_EOL . 'KMS服务检测中...'
-        )), true);
+        $message = tgApi::sendMarkdown('`' . $rawParam . '`' . PHP_EOL . 'KMS服务检测中...');
+        $message = json_decode($message, true);
         fastcgi_finish_request(); // 断开连接
         tgApi::editMessage(array(
             'message_id' => $message['result']['message_id'],
