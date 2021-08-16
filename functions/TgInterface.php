@@ -49,7 +49,7 @@ class tgApi {
         return file_get_contents($url);
     }
 
-    function debugDump() { // 调试接口
+    function debug() { // 调试接口
         global $webhook, $tgEnv;
         $msg .= 'isCallback: ' . ($tgEnv['isCallback'] ? 'true' : 'false') . PHP_EOL;
         $msg .= 'isGroup: ' . ($tgEnv['isGroup'] ? 'true' : 'false') . PHP_EOL;

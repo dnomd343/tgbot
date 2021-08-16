@@ -1,9 +1,9 @@
 <?php
 
 class redisCache {
-    private $redisSetting = array(); // redis接口参数
+    private $redisSetting = array(); // Redis接口参数
 
-    public function __construct($prefix) { // 类初始化
+    public function __construct($prefix) { // 初始化
         global $env;
         $this->redisSetting = array(
             'host' => $env['REDIS_HOST'],
@@ -32,7 +32,7 @@ class redisCache {
         }
         $redisKey = $this->redisSetting['prefix'] . $key;
         $status = $redis->set($redisKey, $data); // 写入数据库
-        $redis->pexpire($redisKey, $cacheTTL * 1000); // 设置过期时间 单位ms
+        $redis->pexpire($redisKey, $cacheTTL * 1000); // 设置过期时间 单位 ms = s * 1000
         return $status;
     }
 }

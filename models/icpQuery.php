@@ -64,9 +64,9 @@ class icpQuery {
 
 class icpQueryEntry {
     private function getIcpTlds() { // 获取所有可ICP备案的顶级域
-        $db = new icpDB;
+        $db = new SqliteDB('./db/tldInfo.db');
         $punycode = new Punycode();
-        $res = $db->query('SELECT tld FROM `tlds`;');
+        $res = $db->query('SELECT tld FROM `icp`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             $tlds[] = $punycode->encode($row['tld']); // 转为Punycode编码
         }
