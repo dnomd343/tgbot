@@ -15,10 +15,10 @@ class tldQueryEntry {
         return $info;
     }
 
-    private function genMessage($info) {
+    private function genMessage($info) { // 生成返回消息
         $msg = '`' . $info['tld'] . '` `(` `' . $info['type'] . '` `)`' . PHP_EOL;
         if (count($info['manager']) !== 0) {
-            $msg .= '*Manager:*' . PHP_EOL;
+            $msg .= '*Manager*' . PHP_EOL;
             foreach ($info['manager']['name'] as $row) {
                 $msg .= '  ' . $row . PHP_EOL;
             }

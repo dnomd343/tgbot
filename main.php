@@ -8,6 +8,8 @@ require_once 'functions/RedisCache.php';
 require_once 'functions/TgInterface.php';
 require_once 'functions/ExtractDomain.php';
 
+fastcgi_finish_request(); // 断开请求连接
+
 $env = loadEnv('.env'); // 载入环境变量
 $apiToken = $env['BOT_TOKEN'];
 $botAccount = $env['BOT_NAME']; // 机器人用户名

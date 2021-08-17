@@ -34,13 +34,14 @@ class cfopPicEntry {
     }
 
     private function getPicId($type) { // 返回图片文件ID
+        global $env;
         switch ($type) {
             case 'gan':
-                return 'BQACAgUAAxkBAAIBtGEOLnr4Q6D4Z_80bgfXq5xsZMeWAAKtAwACWy55VOU-SGKqc7aMIAQ';
+                return $env['CFOP_GAN'];
             case 'mfg':
-                return 'BQACAgUAAxkBAAIB3WEOVHKeYrrGhFo-GffB0W-tQRKlAALQAwACWy55VGny8ArGMkfoIAQ';
+                return $env['CFOP_MFG'];
             case 'yx':
-                return 'BQACAgUAAxkBAAIB32EOVISFQbgmir2abj6QkgqaSX1WAALRAwACWy55VMEuU9lCYTYWIAQ';
+                return $env['CFOP_YX'];
         }
     }
 

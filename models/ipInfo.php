@@ -1,7 +1,12 @@
 <?php
 
 class ipInfo {
-    private $apiPath = 'https://api.343.re/ip/';
+    private $apiPath;
+
+    public function __construct() {
+        global $env;
+        $this->apiPath = $env['ECHOIP_API'];
+    }
 
     private function changeCoor($num) { // 转为时分秒格式
         $stage_1 = floor($num);

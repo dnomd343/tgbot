@@ -1,11 +1,11 @@
 <?php
 
 class icpQuery {
-    private $apiPath = 'https://apidatav2.chinaz.com/single/icp';
+    private $apiPath;
 
     public function __construct() {
         global $env;
-        $this->apiPath .= '?key=' . $env['ICP_KEY'] . '&domain=';
+        $this->apiPath = $env['ICP_API'] . '?key=' . $env['ICP_KEY'] . '&domain=';
     }
 
     private function getIcpInfo($domain) { // ICP备案查询

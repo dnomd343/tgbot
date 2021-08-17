@@ -34,7 +34,12 @@ class kmsKeys {
 }
 
 class kmsCheck {
-    private $api = 'https://kms.343.re/';
+    private $api;
+
+    public function __construct() {
+        global $env;
+        $this->api = $env['KMS_API'];
+    }
 
     public function kmsStatus($host, $port) {
         $server = $host . ':' . $port;
