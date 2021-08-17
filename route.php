@@ -6,6 +6,7 @@ require_once 'models/cfopPic.php';
 require_once 'models/kmsCheck.php';
 require_once 'models/ntpCheck.php';
 require_once 'models/icpQuery.php';
+require_once 'models/tldQuery.php';
 require_once 'models/punycode.php';
 require_once 'models/whoisQuery.php';
 
@@ -21,6 +22,8 @@ function cmdRoute($cmd) { // 命令功能模块路由
             return (new ntpCheckEntry);
         case '/icp':
             return (new icpQueryEntry);
+        case '/tld':
+            return (new tldQueryEntry);
         case '/cfop':
             return (new cfopPicEntry);
         case '/whois':
