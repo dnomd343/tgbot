@@ -12,11 +12,17 @@ class tldQueryEntry {
         $info['admin_contact'] = json_decode(base64_decode($info['admin_contact']), true);
         $info['tech_contact'] = json_decode(base64_decode($info['tech_contact']), true);
         $info['nameserver'] = json_decode(base64_decode($info['nameserver']), true);
+        $info['dnssec'] = json_decode(base64_decode($info['dnssec']), true);
         return $info;
     }
 
     private function genMessage($info) { // 生成返回消息
-        $msg = '`' . $info['tld'] . '` `(` `' . $info['type'] . '` `)`' . PHP_EOL;
+        $msg = '`' . $info['tld'] . '` `(` `' . $info['type'];
+        if ($info['active'] === 'yes') {
+            $msg .= '` `)`' . PHP_EOL;
+        } else {
+            $msg .= ' not active` `)`' . PHP_EOL;
+        }
         if (count($info['manager']) !== 0) {
             $msg .= '*Manager*' . PHP_EOL;
             foreach ($info['manager']['name'] as $row) {
@@ -70,6 +76,59 @@ class tldQueryEntry {
                 foreach ($ips as $ip) {
                     $msg .= '    `' . $ip . '`' . PHP_EOL;
                 }
+            }
+        }
+        if (count($info['dnssec']) !== 0) {
+            if ($info['dnssec']['type'] === 1) { // 正常DNSSEC
+                $msg .= '*DNSSEC*' . PHP_EOL;
+                foreach ($info['dnssec']['ds'] as $ds) {
+                    $msg .= '  *Tag: ' . $ds['tag'] . '*' . PHP_EOL;
+                    if (strlen($ds['hash']) === 64) {
+                        $msg .= '    `' . substr($ds['hash'], 0, 32) . '`' . PHP_EOL;
+                        $msg .= '    `' . substr($ds['hash'], -32) . '`' . PHP_EOL;
+                    } else if (strlen($ds['hash']) === 40){
+                        $msg .= '    `' . substr($ds['hash'], 0, 32) . '`' . PHP_EOL;
+                        $msg .= '    `' . substr($ds['hash'], -8) . '`' . PHP_EOL;
+                    }
+                    $msg .= '    Algorithm: _' . $ds['algorithm'];
+                    if ($ds['algorithm'] === '1') {
+                        $msg .= ' (RSA/MD5)';
+                    } else if ($ds['algorithm'] === '3') {
+                        $msg .= ' (DSA/SHA1)';
+                    } else if ($ds['algorithm'] === '5') {
+                        $msg .= ' (RSA/SHA-1)';
+                    } else if ($ds['algorithm'] === '6') {
+                        $msg .= ' (DSA-NSEC3-SHA1)';
+                    } else if ($ds['algorithm'] === '7') {
+                        $msg .= ' (RSASHA1-NSEC3-SHA1)';
+                    } else if ($ds['algorithm'] === '8') {
+                        $msg .= ' (RSA/SHA-256)';
+                    } else if ($ds['algorithm'] === '10') {
+                        $msg .= ' (RSA/SHA-512)';
+                    } else if ($ds['algorithm'] === '12') {
+                        $msg .= ' (GOST R 34.10-2001)';
+                    } else if ($ds['algorithm'] === '13') {
+                        $msg .= ' (ECDSA Curve P-256 with SHA-256)';
+                    } else if ($ds['algorithm'] === '14') {
+                        $msg .= ' (ECDSA Curve P-384 with SHA-384)';
+                    } else if ($ds['algorithm'] === '15') {
+                        $msg .= ' (Ed25519)';
+                    } else if ($ds['algorithm'] === '16') {
+                        $msg .= ' (Ed448)';
+                    }
+                    $msg .= '_' . PHP_EOL;
+                    $msg .= '    Digest type: _' . $ds['digest'];
+                    if ($ds['digest'] === '1') {
+                        $msg .= ' (SHA-1)';
+                    } else if ($ds['digest'] === '2') {
+                        $msg .= ' (SHA-256)';
+                    }
+                    $msg .= '_' . PHP_EOL;                    
+                }
+            } else if ($info['dnssec']['type'] === 3) { // 启用DNSSEC 但未部署DS记录
+                $msg .= '*DNSSEC:* signed, but without DS record.' . PHP_EOL;
+            } else { // 未启用DNSSEC
+                $msg .= '*DNSSEC:* unsigned' . PHP_EOL;
             }
         }
         if ($info['website'] != '') {
