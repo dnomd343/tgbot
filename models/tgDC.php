@@ -1,7 +1,7 @@
 <?php
 
-class tgDC {
-    private function getDcDetail($dc) { // 获取DC信息
+class tgDC { // 查询用户DC
+    private function getDcDetail($dc) { // 返回DC详细信息
         switch ($dc) {
             case 'DC1':
                 return array(
@@ -24,21 +24,55 @@ class tgDC {
                     'addr' => '新加坡'
                 );
             default:
-                return array();
+                return array(); // 错误输入
         }
     }
 
-    private function curl($url, $timeOut = 5) { // curl模拟 默认5s超时
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $timeOut);
-        $content = curl_exec($curl);
-        curl_close($curl);
-        return $content;
+    private function getUserInfo($account) { // 获取Telegram用户信息
+        $info['dc'] = null;
+        $info['name'] = null;
+        $info['account'] = $account;
+        $html = (new Curl)->get('https://t.me/' . $account); // 获取原始HTML数据
+        $html = preg_replace('/[\t\n\r]+/', '', $html); // 去除干扰
+        if (!is_string($html) || $html == '') {
+            return $info + [ 'time' => time() ]; // 用户名无效
+        }
+        $avatarRegex = '/<img class="tgme_page_photo_image" src="([^<>]+)">/';
+        $nameRegex = '/<span dir="auto">(.+?)<\/span>/';
+        preg_match($avatarRegex, $html, $avatarMatch); // 匹配目标头像
+        preg_match($nameRegex, $html, $nameMatch); // 匹配目标名称
+        if (isset($nameMatch[1])) {
+            $info['name'] = $nameMatch[1]; // 获取用户名
+        }
+        if (isset($avatarMatch[1])) { // 头像可见
+            $dcRegex = '/https:\/\/cdn([1-5])\.telesco\.pe\//';
+            preg_match($dcRegex, $avatarMatch[1], $dcMatch); // 根据cdn?.telesco.pe获取DC
+            if (isset($dcMatch[1])) {
+                $info['dc'] = 'DC' . $dcMatch[1]; // DC匹配成功
+            }
+        }
+        if ($info['dc'] != null) {
+            $info += $this->getDcDetail($info['dc']); // 载入DC详细信息
+        }
+        $info['time'] = time(); // 记录查询时间戳
+        return $info;
     }
 
-    private function checkAccount($account) { // 检查用户名是否合法
+    public function getInfo($account, $isCache = true) { // 获取用户信息 默认带缓存
+        $redis = new RedisCache('tgdc');
+        $info = $redis->getData($account); // 查询缓存数据
+        if (!$isCache || !$info) { // 不缓存 或 缓存未命中
+            $info = $this->getUserInfo($account); // 发起查询
+            $redis->setData($account, json_encode($info)); // 缓存数据 永久
+        } else { // 缓存命中
+            $info = json_decode($info, true); // 使用缓存数据
+        }
+        return $info;
+    }
+}
+
+class tgDCEntry { // DC查询入口
+    private function checkAccount($account) { // 检查用户合法性
         preg_match('/^[a-zA-Z0-9_]+$/', $account, $match);
         if (count($match) === 0 or strlen($account) < 5) { // 用户名由至少5位 0-9/a-z/A-Z/_ 组成
             return false;
@@ -49,128 +83,71 @@ class tgDC {
         return true;
     }
 
-    private function getUserInfo($account) { // 获取Telegram用户信息
-        $info['account'] = $account;
-        $info['name'] = null;
-        $info['dc'] = null;
-        
-        $html = $this->curl('https://t.me/' . $account); // 获取原始HTML数据
-        $html = preg_replace('/[\t\n\r]+/', '', $html); // 去除干扰
-        if (!is_string($html) || $html == '') { return $info; } // 用户名无效
-        $avatarRegex = '/<img class="tgme_page_photo_image" src="([^<>]+)">/';
-        $nameRegex = '/<span dir="auto">(.+?)<\/span>/';
-        preg_match($avatarRegex, $html, $avatarMatch); // 匹配目标头像
-        preg_match($nameRegex, $html, $nameMatch); // 匹配目标名称
-        if ($nameMatch[1]) {
-            $info['name'] = $nameMatch[1]; // 获取用户名
-        }
-        if ($avatarMatch[1]) {
-            $avatarUrl = $avatarMatch[1]; // 获取头像链接
-        }
-        if ($avatarUrl) { // 头像存在
-            $dcRegex = '/https:\/\/cdn(.+)\.telesco\.pe\//';
-            preg_match_all($dcRegex, $avatarUrl, $dcMatch); // 根据cdn?.telesco.pe获取DC
-            if ($dcMatch[1]) {
-                $info['dc'] = 'DC' . $dcMatch[1][0];
-            }
-        }
-        if ($info['dc']) {
-            $info += $this->getDcDetail($info['dc']); // 匹配DC参数
-        }
-        return $info;
+    private function showHelp() { // 显示帮助信息
+        $message = tgApi::sendMarkdown('*Usage:*  `/dc username`');
+        $message = json_decode($message, true);
+        return $message['result']['message_id']; // 返回消息ID
     }
 
-    private function getUserInfoCache($account) { // 获取用户信息 带缓存
-        $redis = new redisCache('tgdc');
-        $info = $redis->getData($account); // 查询缓存数据
-        if (!$info) { // 缓存未命中
-            $info = $this->getUserInfo($account); // 发起查询
-            if (!$info['name'] && !$info['dc']) { // 用户名与头像均无
-                $cacheTTL = 300; // 缓存5min
-            } else if ($info['name'] && !$info['dc']) { // 存在用户名但未设置头像
-                $cacheTTL = 20; // 缓存20s
-            } else {
-                $cacheTTL = 3600; // 其余情况缓存1h
-            }
-            $redis->setData($account, json_encode($info), $cacheTTL); // 缓存数据
-        } else { // 缓存命中
-            $info = json_decode($info, true); // 使用缓存数据
-        }
-        return $info;
-    }
-
-    public function getInfo($account) { // 查询入口
-        if (substr($account, 0, 1) === '@') { // 用户名可带有@
-            $account = substr($account, 1);
-        }
-        if (!$this->checkAccount($account)) { // 用户名不合法
-            return array(
-                'status' => 'error',
-                'message' => '用户名无效'
-            );
-        }
-        $info = $this->getUserInfoCache($account);
+    private function genMessage($info) { // 生成返回信息
         if (!$info['name'] && !$info['dc']) { // 用户名与头像均无
-            return array(
-                'status' => 'error',
-                'message' => '@' . $account . ' 无法识别'
-            );
+            return '@' . $info['account'] . ' 无法识别';
         } else if ($info['name'] && !$info['dc']) { // 存在用户名但未设置头像
-            return array(
-                'status' => 'error',
-                'message' => '@' . $account . ' 未设置头像或不可见'
-            );
+            return '@' . $info['account'] . ' 未设置头像或不可见';
         }
-        return array(
-            'status' => 'ok',
-            'data' => json_encode($info) // 返回查询结果
-        );
+        $msg = '@' . $info['account'] . ' (' . $info['name'] . ')' . PHP_EOL;
+        $msg .= '_' . $info['as'] . '_ ';
+        $msg .= '`(``' . $info['ip'] . '``)`' . PHP_EOL;
+        $msg .= '*' . $info['dc'] . '* - ' . $info['addr'] . PHP_EOL;
+        return $msg; // 返回正常查询结果
     }
-}
 
-class tgDCEntry {
-    private function getInfo($account) {
-        $content = (new tgDC)->getInfo($account); // 发起查询
-        if ($content['status'] === 'ok') {
-            $info = json_decode($content['data'], true);
-            $msg = '@' . $info['account'] . ' (' . $info['name'] . ')' . PHP_EOL;
-            $msg .= '<i>' . $info['as'] . '</i> ';
-            $msg .= '<code>(</code><code>' . $info['ip'] . '</code><code>)</code>' . PHP_EOL;
-            $msg .= '<b>' . $info['dc'] . '</b> - ' . $info['addr'] . PHP_EOL;
-            return array(
-                'parse_mode' => 'HTML', // HTML格式输出
-                'text' => $msg
-            );
+    private function sendInfo($account) { // 查询并发送用户信息
+        if (!$this->checkAccount($account)) { // 用户名不合法
+            tgApi::sendText('用户名无效');
+            return;
+        }
+        $info = (new tgDC)->getInfo($account); // 带缓存查询
+        $message = tgApi::sendMarkdown($this->genMessage($info)); // 发送预查询信息
+        if (!$info['name'] && !$info['dc']) {
+            $cacheTime = 300; // 未设置用户名或用户不存在 缓存5min
+        } else if ($info['name'] && !$info['dc']) {
+            $cacheTime = 20; // 用户头像不可见 缓存20s
         } else {
-            return array(
-                'text' => $content['message'] // 返回错误信息
-            );
+            $cacheTime = 86400; // 用户正常 缓存24h
+        }
+        if ($cacheTime < time() - $info['time']) { // 数据过期 
+            $messageId = json_decode($message, true)['result']['message_id'];
+            $infoRenew = (new tgDC)->getInfo($account, false); // 不带缓存 重新查询
+            unset($info['time']);
+            unset($infoRenew['time']);
+            if ($info !== $infoRenew) { // 数据出现变化
+                tgApi::editMessage(array(
+                    'parse_mode' => 'Markdown',
+                    'message_id' => $messageId,
+                    'text' => $this->genMessage($infoRenew) // 更新信息
+                ));
+            }
         }
     }
 
     public function query($rawParam) { // tgDC查询入口
-        $helpMsg = array( // 使用说明
-            'parse_mode' => 'Markdown',
-            'text' => '*Usage:*  `/dc username`'
-        );
-        if ($rawParam === 'help') { // 查询使用说明
-            tgApi::sendMessage($helpMsg);
-            return;
-        }
-        if ($rawParam !== '') { // 查询指定用户数据
-            tgApi::sendMessage($this->getInfo($rawParam));
-            return;
-        }
         global $tgEnv;
-        if (!$tgEnv['isGroup']) { // 群组不发送帮助信息
-            $message = json_decode(tgApi::sendMessage($helpMsg), true); // 发送使用说明
+        if ($rawParam === 'help') { $this->showHelp(); } // 显示使用说明
+        if ($rawParam == '') {
+            $rawParam = $tgEnv['userAccount']; // 空指令时查询对方信息
+            if (!$tgEnv['isGroup']) {
+                $messageId = $this->showHelp(); // 非群组发送使用说明
+            }
         }
-        tgApi::sendMessage($this->getInfo($tgEnv['userAccount'])); // 查询对方用户名
-        if ($tgEnv['isGroup']) { return; }
-        fastcgi_finish_request(); // 断开连接
+        if (substr($rawParam, 0, 1) === '@') {
+            $rawParam = substr($rawParam, 1); // 去除用户名前@
+        }
+        $this->sendInfo($rawParam); // 查询并发送用户信息
+        if (!isset($messageId)) { return; }
         sleep(10); // 延迟10s
         tgApi::deleteMessage(array( // 删除使用说明
-            'message_id' => $message['result']['message_id']
+            'message_id' => $messageId
         ));
     }
 }
