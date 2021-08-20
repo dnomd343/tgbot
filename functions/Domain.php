@@ -5,6 +5,17 @@ class Domain { // 域名相关功能
         preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $domain, $match);
         return (count($match) != 0);
     }
+
+    public function isHost($host) { // 判断host是否合法
+        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $host, $match);
+        if (count($match) !== 0) { // 域名
+            if (!is_numeric(substr($host, -1))) { return true; } // 域名最后一位不为数字
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP)) { // IP地址
+            return true;
+        }
+        return false;
+    }
 }
 
 class extractDomain {

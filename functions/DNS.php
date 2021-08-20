@@ -40,7 +40,7 @@ class DNS {
         return $ipAddr;
     }
 
-    private function ip2long6($ipv6) { // 压缩IPv6地址为long
+    public function ip2long6($ipv6) { // 压缩IPv6地址为long
         $ip_n = inet_pton($ipv6);
         $bits = 15;
         while ($bits >= 0) {
@@ -51,7 +51,7 @@ class DNS {
         return gmp_strval(gmp_init($ipv6long, 2), 10);
     }
       
-    private function long2ip6($ipv6long) { // 解压long为IPv6地址
+    public function long2ip6($ipv6long) { // 解压long为IPv6地址
         $bin = gmp_strval(gmp_init($ipv6long, 10), 2);
         if (strlen($bin) < 128) {
             $pad = 128 - strlen($bin);
