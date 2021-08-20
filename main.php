@@ -2,12 +2,13 @@
 
 require_once 'env.php';
 require_once 'route.php';
+require_once 'functions/DNS.php';
 require_once 'functions/Curl.php';
+require_once 'functions/Domain.php';
 require_once 'functions/Punycode.php';
 require_once 'functions/SqliteDB.php';
 require_once 'functions/RedisCache.php';
 require_once 'functions/TgInterface.php';
-require_once 'functions/ExtractDomain.php';
 
 fastcgi_finish_request(); // 断开连接
 $env = loadEnv('.env'); // 载入环境变量

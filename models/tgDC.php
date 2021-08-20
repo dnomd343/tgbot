@@ -83,7 +83,7 @@ class tgDCEntry { // DC查询入口
         return true;
     }
 
-    private function showHelp() { // 显示帮助信息
+    private function sendHelp() { // 显示帮助信息
         $message = tgApi::sendMarkdown('*Usage:*  `/dc username`');
         $message = json_decode($message, true);
         return $message['result']['message_id']; // 返回消息ID
@@ -133,11 +133,11 @@ class tgDCEntry { // DC查询入口
 
     public function query($rawParam) { // tgDC查询入口
         global $tgEnv;
-        if ($rawParam === 'help') { $this->showHelp(); } // 显示使用说明
+        if ($rawParam === 'help') { $this->sendHelp(); } // 显示使用说明
         if ($rawParam == '') {
             $rawParam = $tgEnv['userAccount']; // 空指令时查询对方信息
             if (!$tgEnv['isGroup']) {
-                $messageId = $this->showHelp(); // 非群组发送使用说明
+                $messageId = $this->sendHelp(); // 非群组发送使用说明
             }
         }
         if (substr($rawParam, 0, 1) === '@') {

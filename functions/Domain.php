@@ -1,5 +1,12 @@
 <?php
 
+class Domain { // 域名相关功能
+    public function isDomain($domain) { // 检测是否为域名
+        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $domain, $match);
+        return (count($match) != 0);
+    }
+}
+
 class extractDomain {
     private $tldDB = './db/tldInfo.db'; // 顶级域名数据库
 
