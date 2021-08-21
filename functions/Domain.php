@@ -1,6 +1,8 @@
 <?php
 
 class Domain { // 域名相关功能
+    private $tldDB = './db/tldInfo.db'; // 顶级域名数据库
+    
     public function isDomain($domain) { // 检测是否为域名
         preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $domain, $match);
         return (count($match) != 0);
@@ -16,12 +18,8 @@ class Domain { // 域名相关功能
         }
         return false;
     }
-}
 
-class extractDomain {
-    private $tldDB = './db/tldInfo.db'; // 顶级域名数据库
-
-    private function getAllTlds() { // 获取所有顶级域 含次级域
+    private function getTldList() { // 获取所有顶级域 含次级域
         $db = new SqliteDB($this->tldDB);
         $res = $db->query('SELECT record FROM `list`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
@@ -30,28 +28,21 @@ class extractDomain {
         return $tlds; // Unicode字符使用Punycode编码
     }
 
-    private function isDomain($domain) { // 检测是否为域名
-        preg_match('/^(?=^.{3,255}$)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/', $domain, $match);
-        return (count($match) != 0);
-    }
-
-    private function getDomain($url) { // 从URL获取域名
+    private function extractDomain($url) { // 从URL获取域名
         $url = preg_replace('/^[\w]+:\/\//', '', $url); // 去除协议字段
         $url = explode('?', $url)[0]; // 去除请求参数内容
         $domain = explode('/', $url)[0]; // 分离域名
         return (new Punycode)->encode($domain);
     }
 
-    private function getTld($domain) { // 搜索域名TLD
-        $tlds = $this->getAllTlds(); // 获取TLD列表
+    private function getTld($domain) { // 匹配域名TLD
+        $tlds = $this->getTldList(); // 获取TLD列表
         foreach ($tlds as $tld) {
             if (substr($domain, -strlen($tld)) === $tld) { // 匹配测试
                 $target[] = $tld;
             }
         }
-        if (count($target) === 0) {
-            return ''; // 匹配不到TLD
-        };
+        if (!isset($target)) { return null; }  // 匹配不到TLD
         $type = 0;
         foreach ($target as $tld) { // 遍历可能的结果
             $num = substr_count($tld, '.');
@@ -70,21 +61,28 @@ class extractDomain {
     }
 
     public function analyse($url) { // 分析域名信息
-        $domain = $this->getDomain($url);
+        $domain = $this->extractDomain($url);
         if (!$this->isDomain($domain)) { // 域名不合格
             return array();
         }
         $tld = $this->getTld($domain);
-        if ($tld == '') { // 匹配不到TLD
-            return array(
-                'domain' => $domain
-            );
+        if ($tld === null) { // 匹配不到TLD
+            return [ 'domain' => $domain ];
         }
         return array(
             'domain' => $domain,
             'tld' => $tld,
             'site' => $this->getSite($domain, $tld)
         );
+    }
+
+    public function icpTldInfo($tld) { // 查询TLD的ICP信息
+        $db = new SqliteDB($this->tldDB);
+        $info = $db->query('SELECT * FROM `icp` WHERE tld="' . $tld . '";');
+        $info = $info->fetchArray(SQLITE3_ASSOC);
+        if ($info == '') { return null; } // TLD不存在于ICP列表中
+        $info['site'] = json_decode(base64_decode($info['site']), true);
+        return $info;
     }
 }
 
