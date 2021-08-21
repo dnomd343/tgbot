@@ -1,6 +1,6 @@
 <?php
 
-class Curl {
+class Curl { // Curl模拟http请求
     public $ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36 Edg/92.0.902.67';
 
     public function get($url, $timeOut = 30) { // curl模拟Get 默认30s超时

@@ -1,17 +1,16 @@
 <?php
 
 class ntpServer { // 获取NTP服务器列表
-    private $ntpDB = './db/ntpServer.db'; // NTP服务器数据库
+    private $db, $ntpDB = './db/ntpServer.db'; // NTP服务器数据库
 
     private function getListName($listId) { // 获取对应组的名称
-        $db = new SqliteDB($this->ntpDB);
-        $res = $db->query('SELECT * FROM `ntp_list` WHERE id=' . $listId . ';');
+        $res = $this->db->query('SELECT * FROM `ntp_list` WHERE id=' . $listId . ';');
         return $res->fetchArray(SQLITE3_ASSOC)['name'];
     }
 
     public function getList() { // 获取所有NTP服务器地址
-        $db = new SqliteDB($this->ntpDB);
-        $res = $db->query('SELECT * FROM `ntp_host`;');
+        $this->db = new SqliteDB($this->ntpDB);
+        $res = $this->db->query('SELECT * FROM `ntp_host`;');
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             $index = $row['list_id'];
             unset($row['list_id']);
@@ -210,7 +209,7 @@ class ntpCheckEntry { // NTP功能入口
     private function sendNtpStatus($host) { // 检查并发送NTP服务器状态
         if ((new ntpCheck)->isCache($host)) { // 状态已缓存
             $servers = (new ntpCheck)->ntpStatus($host);
-            tgApi::sendMarkdown($this->genMessage($host, $servers)); // 查询并发送
+            tgApi::sendMarkdown($this->genMessage($host, $servers)); // 发送服务器状态
             return;
         }
         $message = tgApi::sendMarkdown('`' . $host . '`' . PHP_EOL . 'NTP Server Checking...');

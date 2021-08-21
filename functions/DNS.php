@@ -1,6 +1,6 @@
 <?php
 
-class DNS {
+class DNS { // DNS解析功能
     public function resolveA($domain) { // DNS解析A记录
         $ipAddr = array();
         $rs = dns_get_record(strtolower($domain), DNS_A);
