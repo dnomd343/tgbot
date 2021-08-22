@@ -1,6 +1,6 @@
 <?php
 
-class punycodeEntry {
+class punycodeEntry { // Punycode编码转换入口
     private function checkErr($punycode) { // 处理Punycode库错误警告
         if ($punycode->errFlag) {
             return array(
@@ -41,7 +41,7 @@ class punycodeEntry {
             }
         }
         if (isset($errMsg)) { // 存在警告
-            if (substr($rawParam, 0, 1) !== '.' && substr($rawParam, -1) !== '.') { // 首尾不为.
+            if (substr($rawParam, 0, 1) !== '.' && substr($rawParam, -1) !== '.') { // 首尾不为.时发送警告内容
                 $msg .= '*Warning:* ' . $errMsg;
             }
         }

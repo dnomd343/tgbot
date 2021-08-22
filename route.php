@@ -32,7 +32,7 @@ function cmdRoute($cmd) { // 命令功能模块路由
         case '/punycode':
             return (new punycodeEntry);
     }
-    return null;
+    return null; // 命令不存在
 }
 
 function route($message) { // 请求路由
@@ -52,6 +52,7 @@ function route($message) { // 请求路由
             $cmd = substr($cmd, 0, strlen($cmd) - strlen($botAccount) - 1); // 分离@机器人
         }
     }
+    $rawParam = trim($rawParam);
     $entry = cmdRoute($cmd); // 获取功能模块入口
     if (!$entry) { return; } // 命令不存在
     if ($tgEnv['isCallback']) {

@@ -2,17 +2,20 @@
 
 require_once 'env.php';
 require_once 'route.php';
+require_once 'functions/DNS.php';
+require_once 'functions/Curl.php';
+require_once 'functions/Domain.php';
+require_once 'functions/DNSSEC.php';
 require_once 'functions/Punycode.php';
 require_once 'functions/SqliteDB.php';
 require_once 'functions/RedisCache.php';
 require_once 'functions/TgInterface.php';
-require_once 'functions/ExtractDomain.php';
 
-fastcgi_finish_request(); // 断开请求连接
-
+fastcgi_finish_request(); // 断开连接
 $env = loadEnv('.env'); // 载入环境变量
 $apiToken = $env['BOT_TOKEN'];
 $botAccount = $env['BOT_NAME']; // 机器人用户名
+ini_set('date.timezone', $env['TIME_ZONE']); // 设置时区
 $apiPath = 'https://api.telegram.org/bot' . $apiToken; // Telegram API接口
 $webhook = json_decode(file_get_contents("php://input"), TRUE); // Webhook接受信息
 
@@ -27,6 +30,7 @@ if ($isCallback) { // 回调请求模式
     $messageFrom = $webhook['message']['from'];
 }
 $chat = $message['chat'];
+
 $tgEnv = array(
     'isGroup' => ($chat['type'] === 'group') ? true : false, // 是否为群组
     'isCallback' => $isCallback, // 是否为回调请求

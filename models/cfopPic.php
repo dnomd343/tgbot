@@ -1,91 +1,74 @@
 <?php
 
-class cfopPicEntry {
-    private function getCfopMsg() {
-        return array(
+class cfopPicEntry { // 获取CFOP公式图片
+    private function sendMenu() { // 发送菜单
+        $buttons = array(
+            array([
+                'text' => '网页下载',
+                'url' => 'https://res.dnomd343.top/Share/cfop/'
+            ]),
+            array([
+                'text' => '获取全部',
+                'callback_data' => '/cfop all'
+            ]),
+            array(
+                array(
+                    'text' => 'GAN',
+                    'callback_data' => '/cfop gan'
+                ),
+                array(
+                    'text' => '魔方格',
+                    'callback_data' => '/cfop mfg'
+                ),
+                array(
+                    'text' => '裕鑫',
+                    'callback_data' => '/cfop yx'
+                )
+            )
+        );
+        tgApi::sendMessage(array(
             'text' => 'CFOP魔方公式合集',
             'reply_markup' => json_encode(array(
-                'inline_keyboard' => array(
-                    array([
-                        'text' => '网页下载',
-                        'url' => 'https://res.dnomd343.top/Share/cfop/'
-                    ]),
-                    array([
-                        'text' => '获取全部',
-                        'callback_data' => '/cfop all'
-                    ]),
-                    array(
-                        array(
-                            'text' => 'GAN',
-                            'callback_data' => '/cfop gan'
-                        ),
-                        array(
-                            'text' => '魔方格',
-                            'callback_data' => '/cfop mfg'
-                        ),
-                        array(
-                            'text' => '裕鑫',
-                            'callback_data' => '/cfop yx'
-                        )
-                    )
-                )
+                'inline_keyboard' => $buttons
             ))
-        );
+        ));
     }
 
-    private function getPicId($type) { // 返回图片文件ID
+    private function sendCfopPic($type) { // 发送图片
         global $env;
-        switch ($type) {
-            case 'gan':
-                return $env['CFOP_GAN'];
-            case 'mfg':
-                return $env['CFOP_MFG'];
-            case 'yx':
-                return $env['CFOP_YX'];
-        }
-    }
-
-    private function getPic($type) { // 获取图片
-        switch ($type) {
-            case 'gan':
-            case 'mfg':
-            case 'yx':
-                return array(
-                    'document' => $this->getPicId($type)
-                );
-            case '':
-                return $this->getCfopMsg();
-            default:
-                return array(
-                    'text' => '未知公式'
-                );
-        }
-    }
-
-    private function sendCfopPic($params) { // 发送图片或信息
-        if ($params['document']) {
-            tgApi::sendDocument($params);
+        if ($type === 'gan') {
+            $picId = $env['CFOP_GAN'];
+        } else if ($type === 'mfg') {
+            $picId = $env['CFOP_MFG'];
+        } else if ($type === 'yx') {
+            $picId = $env['CFOP_YX'];
+        } else if ($type === '' || $type === 'help') {
+            $this->sendMenu();
         } else {
-            tgApi::sendMessage($params);
+            tgApi::sendText('未知公式');
+        }
+        if (isset($picId)) {
+            tgApi::sendDocument(array(
+                'document' => $picId
+            ));
         }
     }
 
     public function query($rawParam) { // CFOP图片查询入口
-        $this->sendCfopPic($this->getPic($rawParam));
+        $this->sendCfopPic($rawParam);
     }
 
     public function callback($rawParam) { // CFOP图片回调入口
-        if ($rawParam === 'all') {
-            global $tgEnv;
-            tgApi::deleteMessage(array( // 删除源消息
-                'message_id' => $tgEnv['messageId']
-            ));
-            $this->sendCfopPic($this->getPic('gan'));
-            $this->sendCfopPic($this->getPic('mfg'));
-            $this->sendCfopPic($this->getPic('yx'));
+        if ($rawParam !== 'all') {
+            $this->sendCfopPic($rawParam);
             return;
         }
-        $this->sendCfopPic($this->getPic($rawParam));
+        $this->sendCfopPic('gan');
+        $this->sendCfopPic('mfg');
+        $this->sendCfopPic('yx');
+        tgApi::deleteMessage(array( // 删除源消息
+            'message_id' => $GLOBALS['tgEnv']['messageId']
+        ));
     }
 }
 
