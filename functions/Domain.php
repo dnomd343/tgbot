@@ -76,6 +76,17 @@ class Domain { // 域名相关功能
         );
     }
 
+    public function getSubTld($tld) {
+        $db = new SqliteDB($this->tldDB);
+        $res = $db->query('SELECT record FROM `list` WHERE tld="' . $tld . '";');
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            if ($row['record'] !== $tld) {
+                $subTld[] = $row['record'];
+            }
+        }
+        return $subTld;
+    }
+
     public function icpTldInfo($tld) { // 查询TLD的ICP信息
         $db = new SqliteDB($this->tldDB);
         $info = $db->query('SELECT * FROM `icp` WHERE tld="' . $tld . '";');

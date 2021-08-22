@@ -5,6 +5,7 @@ require_once 'route.php';
 require_once 'functions/DNS.php';
 require_once 'functions/Curl.php';
 require_once 'functions/Domain.php';
+require_once 'functions/DNSSEC.php';
 require_once 'functions/Punycode.php';
 require_once 'functions/SqliteDB.php';
 require_once 'functions/RedisCache.php';
