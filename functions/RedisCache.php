@@ -37,6 +37,16 @@ class RedisCache {
         }
         return $status;
     }
+
+    public function delData($key) { // 删除Redis缓存
+        $redis = new Redis();
+        $redis->connect($this->redisSetting['host'], $this->redisSetting['port']);
+        if ($this->redisSetting['passwd'] !== '') {
+            $redis->auth($this->redisSetting['passwd']); // 密码认证
+        }
+        $redisKey = $this->redisSetting['prefix'] . $key;
+        return $redis->del($redisKey);
+    }
 }
 
 ?>

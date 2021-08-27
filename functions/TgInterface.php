@@ -1,6 +1,6 @@
 <?php
 
-class tgApi {
+class tgApi { // Telegram消息发送接口
     public function sendText($msg, $chatId = 0) { // 发送纯文本
         return tgApi::sendMessage(['text' => $msg], $chatId);
     }

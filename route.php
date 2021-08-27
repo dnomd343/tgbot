@@ -38,6 +38,12 @@ function cmdRoute($cmd) { // 命令功能模块路由
 function route($message) { // 请求路由
     global $tgEnv, $botAccount;
     $message = trim($message); // 去除前后空字符
+    if (!$tgEnv['isGroup']) { // 当前为私聊模式
+        $reply = tgReply::match();
+        if ($reply !== null) { // 有待回复记录
+            $message = $reply['cmd'] . ' ' . $message;
+        }
+    }
     if (strpos($message, '/') !== 0) { return; } // 命令必须以 / 开头
     $temp = explode(' ', $message);
     $cmd = $temp[0];

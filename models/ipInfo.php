@@ -134,8 +134,15 @@ class ipInfoEntry { // IP信息查询入口
     }
 
     public function query($rawParam) { // ipInfo查询入口
-        if ($rawParam == '' || $rawParam === 'help') {
+        if ($rawParam === 'help') {
             $this->sendHelp(); // 显示使用说明
+        } else if ($rawParam == '') {
+            if ($GLOBALS['tgEnv']['isGroup']) { // 此时为群组
+                $this->sendHelp(); // 显示使用说明
+            } else {
+                tgReply::add('/ip');
+                tgApi::sendText('Please send the IP / Domain');
+            }
         } else if (filter_var($rawParam, FILTER_VALIDATE_IP)) { // 参数为IP地址
             $this->sendInfo($rawParam); // 查询并发送IP信息
         } else if ((new Domain)->isDomain($rawParam)) { // 参数为域名
