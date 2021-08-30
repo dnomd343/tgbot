@@ -67,6 +67,11 @@ class DNS { // DNS解析功能
         }
         return inet_ntop(inet_pton(substr($ipv6, 0, -1)));
     }
+
+    public function zipIPv6($ipv6) { // 压缩IPv6地址
+        $ipv6 = $this->ip2long6($ipv6);
+        return $this->long2ip6($ipv6);
+    }
 }
 
 ?>

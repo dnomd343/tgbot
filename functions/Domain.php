@@ -95,6 +95,14 @@ class Domain { // 域名相关功能
         $info['site'] = json_decode(base64_decode($info['site']), true);
         return $info;
     }
+
+    public function getWhoisServer($tld) { // 查询TLD的whois服务器
+        $db = new SqliteDB($this->tldDB);
+        $res = $db->query('SELECT * FROM `iana` WHERE tld="' . $tld . '";');
+        $info = $res->fetchArray(SQLITE3_ASSOC);
+        if (!$info) { return null; } // 查无该TLD
+        return $info['whois']; // 返回查询结果
+    }
 }
 
 ?>
