@@ -36,7 +36,8 @@ function cmdRoute($cmd) { // 命令功能模块路由
 }
 
 function route($message) { // 请求路由
-    global $tgEnv, $botAccount;
+    global $tgEnv;
+    $botAccount = $tgEnv['myInfo']['account'];
     $message = trim($message); // 去除前后空字符
     if (!$tgEnv['isGroup']) { // 当前为私聊模式
         $reply = tgReply::match();
@@ -51,14 +52,13 @@ function route($message) { // 请求路由
         $rawParam = '';
     } else { // 命令带有参数
         unset($temp[0]);
-        $rawParam = implode(' ', $temp); // 获得参数
+        $rawParam = trim(implode(' ', $temp)); // 获得参数
     }
     if ($tgEnv['isGroup']) { // 当前为群组
         if (substr($cmd, -strlen($botAccount) - 1) === '@' . $botAccount) {
             $cmd = substr($cmd, 0, strlen($cmd) - strlen($botAccount) - 1); // 分离@机器人
         }
     }
-    $rawParam = trim($rawParam);
     $entry = cmdRoute($cmd); // 获取功能模块入口
     if (!$entry) { return; } // 命令不存在
     if ($tgEnv['isCallback']) {
