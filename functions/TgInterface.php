@@ -48,26 +48,31 @@ class tgApi { // Telegram消息发送接口
         return file_get_contents($url);
     }
 
+    public function md_encode($str) {
+        return strtr($str, array(
+            '_' => '\_',
+            '*' => '\*',
+            '[' => '\[',
+            '`' => '\`',
+        ));
+    }
+
     function debug() { // 调试接口
         global $tgEnv;
-        $msg = '<i>---- tgEnv Content ----</i>' . PHP_EOL;
-        $msg .= '<b>myId:</b> ' . $tgEnv['myInfo']['id'] . PHP_EOL;
-        $msg .= '<b>myName:</b> ' . $tgEnv['myInfo']['name'] . PHP_EOL;
-        $msg .= '<b>myAccount:</b> ' . $tgEnv['myInfo']['account'] . PHP_EOL;
-        $msg .= '<b>isCallback:</b> ' . ($tgEnv['isCallback'] ? 'true' : 'false') . PHP_EOL;
-        $msg .= '<b>isGroup:</b> ' . ($tgEnv['isGroup'] ? 'true' : 'false') . PHP_EOL;
-        $msg .= '<b>messageText:</b> ' . $tgEnv['messageText'] . PHP_EOL;
-        $msg .= '<b>messageId:</b> ' . $tgEnv['messageId'] . PHP_EOL;
-        $msg .= '<b>chatId:</b> ' . $tgEnv['chatId'] . PHP_EOL;
-        $msg .= '<b>userId:</b> ' . $tgEnv['userId'] . PHP_EOL;
-        $msg .= '<b>userName:</b> ' . $tgEnv['userName'] . PHP_EOL;
-        $msg .= '<b>userAccount:</b> ' . $tgEnv['userAccount'] . PHP_EOL;
-        $msg .= '<b>demo:</b> ' . 'dnom<html>d343' . PHP_EOL;
-        $msg .= '<b>userLanguage:</b> ' . $tgEnv['userLanguage'] . PHP_EOL;
-        tgApi::sendMessage(array(
-            'text' => $msg,
-            'parse_mode' => 'HTML', // HTML格式输出
-        ));
+        $msg = '_---- tgEnv Content ----_' . PHP_EOL;
+        $msg .= '*myId:* ' . $tgEnv['myInfo']['id'] . PHP_EOL;
+        $msg .= '*myName:* ' . tgApi::md_encode($tgEnv['myInfo']['name']) . PHP_EOL;
+        $msg .= '*myAccount:* ' . tgApi::md_encode($tgEnv['myInfo']['account']) . PHP_EOL;
+        $msg .= '*isCallback:* ' . ($tgEnv['isCallback'] ? 'true' : 'false') . PHP_EOL;
+        $msg .= '*isGroup:* ' . ($tgEnv['isGroup'] ? 'true' : 'false') . PHP_EOL;
+        $msg .= '*messageText:* ' . tgApi::md_encode($tgEnv['messageText']) . PHP_EOL;
+        $msg .= '*messageId:* ' . $tgEnv['messageId'] . PHP_EOL;
+        $msg .= '*chatId:* ' . $tgEnv['chatId'] . PHP_EOL;
+        $msg .= '*userId:* ' . $tgEnv['userId'] . PHP_EOL;
+        $msg .= '*userName:* ' . tgApi::md_encode($tgEnv['userName']) . PHP_EOL;
+        $msg .= '*userAccount:* ' . tgApi::md_encode($tgEnv['userAccount']) . PHP_EOL;
+        $msg .= '*userLanguage:* ' . tgApi::md_encode($tgEnv['userLanguage']) . PHP_EOL;
+        tgApi::sendMarkdown($msg);
     }
 }
 
